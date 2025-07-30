@@ -32,6 +32,7 @@ class PDFCombinerGUI(tb.Window):
         self.file_listbox.bind('<Up>', self._on_file_listbox_up)
         self.file_listbox.bind('<Down>', self._on_file_listbox_down)
         self.file_listbox.bind('<Return>', self._on_file_listbox_enter)
+        self.file_listbox.bind('<Tab>', self._on_file_listbox_tab)
         self.file_listbox.focus_set()
 
         # Center controls
@@ -53,6 +54,7 @@ class PDFCombinerGUI(tb.Window):
         self.selected_listbox.bind('<Down>', self._on_selected_listbox_down)
         self.selected_listbox.bind('<Shift-Up>', self._on_selected_listbox_shift_up)
         self.selected_listbox.bind('<Shift-Down>', self._on_selected_listbox_shift_down)
+        self.selected_listbox.bind('<Shift-Tab>', self._on_selected_listbox_shift_tab)
         # Reorder buttons
         btn_up = tb.Button(frame_right, text="↑ Subir", bootstyle=SECONDARY, command=self.move_up)
         btn_up.pack(side="left", padx=5, pady=5)
@@ -89,6 +91,13 @@ class PDFCombinerGUI(tb.Window):
                 self.file_listbox.selection_clear(0, tk.END)
                 self.file_listbox.selection_set(idx+1)
                 self.file_listbox.see(idx+1)
+        return "break"
+
+    def _on_file_listbox_tab(self, event):
+        # Mover el foco a la lista de la derecha
+        self.selected_listbox.focus_set()
+        if self.selected_listbox.size() > 0:
+            self.selected_listbox.selection_set(0)
         return "break"
 
     def _on_selected_listbox_up(self, event):
@@ -131,6 +140,13 @@ class PDFCombinerGUI(tb.Window):
             self._refresh_selected_listbox()
             self.selected_listbox.selection_set(idx+1)
             self.selected_listbox.see(idx+1)
+        return "break"
+
+    def _on_selected_listbox_shift_tab(self, event):
+        # Mover el foco a la lista de la izquierda
+        self.file_listbox.focus_set()
+        if self.file_listbox.size() > 0:
+            self.file_listbox.selection_set(0)
         return "break"
 
     def _populate_file_list(self):
