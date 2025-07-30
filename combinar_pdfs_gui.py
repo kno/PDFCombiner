@@ -1,374 +1,446 @@
 import os
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
-import ttkbootstrap as tb
-from ttkbootstrap.constants import *
-from PyPDF2 import PdfWriter, PdfReader
+import sys
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,
+                            QListWidget, QPushButton, QLabel, QCheckBox, QMessageBox,
+                            QFileDialog, QWidget, QListWidgetItem, QFrame)
+from PyQt6.QtCore import Qt, QMimeData, pyqtSignal
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QDragMoveEvent
 from pdf_utils import AdvancedPDFCombiner, TextProcessor
 
-class PDFCombinerGUI(tb.Window):
+class DragDropListWidget(QListWidget):
+    """Lista personalizada con soporte para drag & drop y tooltips"""
+
+    def __init__(self, parent=None, show_tooltips=True):
+        super().__init__(parent)
+        self.show_tooltips = show_tooltips
+        self.file_tooltips = {}
+        self.setDragDropMode(QListWidget.DragDropMode.InternalMove)
+
+        # Solo habilitar drag & drop en la lista de seleccionados
+        if parent and hasattr(parent, 'is_selected_list'):
+            self.setDragDropMode(QListWidget.DragDropMode.InternalMove)
+        else:
+            self.setDragDropMode(QListWidget.DragDropMode.NoDragDrop)
+
+    def set_tooltips(self, tooltips_dict):
+        """Establecer el diccionario de tooltips"""
+        self.file_tooltips = tooltips_dict
+
+    def mouseMoveEvent(self, event):
+        """Mostrar tooltip al mover el mouse"""
+        if self.show_tooltips:
+            item = self.itemAt(event.pos())
+            if item:
+                row = self.row(item)
+                if row in self.file_tooltips:
+                    self.setToolTip(f"📄 {self.file_tooltips[row]}")
+                else:
+                    self.setToolTip("")
+            else:
+                self.setToolTip("")
+        super().mouseMoveEvent(event)
+
+class PDFCombinerGUI(QMainWindow):
     def __init__(self):
-        super().__init__(themename="superhero")
-        self.title("PDF Combiner Pro - GUI Edition")
-        self.geometry("900x500")
-        self.resizable(False, False)
+        super().__init__()
         self.selected_files = []
-        # Variables para el drag & drop
-        self.drag_start_index = None
-        self.drag_data = None
-        self._setup_ui()
+        self.file_tooltips = {}
+        self.selected_tooltips = {}
+        self.init_ui()
+        self.populate_file_list()
 
-    def _setup_ui(self):
-        # Layout: 3 columns (left: file browser, center: add button, right: selected files)
-        self.columnconfigure(0, weight=1, minsize=250)
-        self.columnconfigure(1, weight=0, minsize=100)
-        self.columnconfigure(2, weight=1, minsize=250)
-        self.rowconfigure(0, weight=1)
+    def init_ui(self):
+        """Inicializar la interfaz de usuario"""
+        self.setWindowTitle("PDF Combiner Pro - Qt Edition")
+        self.setGeometry(100, 100, 900, 500)
 
-        # File browser (left)
-        frame_left = tb.Frame(self)
-        frame_left.grid(row=0, column=0, sticky="nsew", padx=(10,5), pady=10)
-        lbl_files = tb.Label(frame_left, text="Navegador de archivos", bootstyle=PRIMARY)
-        lbl_files.pack(anchor="w")
-        self.file_listbox = tk.Listbox(frame_left, selectmode=tk.MULTIPLE, height=22)
-        self.file_listbox.pack(fill="both", expand=True, pady=5)
-        self._populate_file_list()
-        self.file_listbox.bind('<Up>', self._on_file_listbox_up)
-        self.file_listbox.bind('<Down>', self._on_file_listbox_down)
-        self.file_listbox.bind('<Return>', self._on_file_listbox_enter)
-        self.file_listbox.bind('<Tab>', self._on_file_listbox_tab)
-        self.file_listbox.bind('<Double-Button-1>', self._on_file_listbox_double_click)
-        self.file_listbox.focus_set()
+        # Widget central
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
 
-        # Center controls
-        frame_center = tb.Frame(self)
-        frame_center.grid(row=0, column=1, sticky="ns", pady=10)
-        btn_add = tb.Button(frame_center, text="Añadir →", bootstyle=SUCCESS, command=self.add_selected_files)
-        btn_add.pack(pady=(100,10))
+        # Layout principal horizontal
+        main_layout = QHBoxLayout(central_widget)
+
+        # Frame izquierdo - Navegador de archivos
+        left_frame = QFrame()
+        left_frame.setFrameStyle(QFrame.Shape.StyledPanel)
+        left_frame.setMinimumWidth(280)
+        left_layout = QVBoxLayout(left_frame)
+
+        # Etiqueta del navegador
+        lbl_files = QLabel("Navegador de archivos")
+        lbl_files.setStyleSheet("font-weight: bold; color: #2196F3; padding: 5px;")
+        left_layout.addWidget(lbl_files)
+
+        # Lista de archivos
+        self.file_listbox = DragDropListWidget(show_tooltips=True)
+        self.file_listbox.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
+        self.file_listbox.itemDoubleClicked.connect(self.on_file_double_click)
+        left_layout.addWidget(self.file_listbox)
+
+        # Frame central - Controles
+        center_frame = QFrame()
+        center_frame.setMaximumWidth(120)
+        center_layout = QVBoxLayout(center_frame)
+        center_layout.addStretch()
+
+        # Botón añadir
+        btn_add = QPushButton("Añadir →")
+        btn_add.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                font-weight: bold;
+                padding: 8px;
+                border: none;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+        """)
+        btn_add.clicked.connect(self.add_selected_files)
+        center_layout.addWidget(btn_add)
 
         # Checkbox para índice
-        self.create_index_var = tk.BooleanVar(value=True)
-        chk_index = tb.Checkbutton(frame_center, text="Crear índice interactivo",
-                                  variable=self.create_index_var, bootstyle=INFO)
-        chk_index.pack(pady=5)
+        self.create_index_checkbox = QCheckBox("Crear índice interactivo")
+        self.create_index_checkbox.setChecked(True)
+        self.create_index_checkbox.setStyleSheet("color: #2196F3; font-weight: bold; padding: 5px;")
+        center_layout.addWidget(self.create_index_checkbox)
 
-        btn_combine = tb.Button(frame_center, text="Combinar PDFs", bootstyle=INFO, command=self.combine_pdfs)
-        btn_combine.pack(pady=10)
+        # Botón combinar
+        btn_combine = QPushButton("Combinar PDFs")
+        btn_combine.setStyleSheet("""
+            QPushButton {
+                background-color: #2196F3;
+                color: white;
+                font-weight: bold;
+                padding: 10px;
+                border: none;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+        """)
+        btn_combine.clicked.connect(self.combine_pdfs)
+        center_layout.addWidget(btn_combine)
 
-        # Selected files (right)
-        frame_right = tb.Frame(self)
-        frame_right.grid(row=0, column=2, sticky="nsew", padx=(5,10), pady=10)
-        lbl_selected = tb.Label(frame_right, text="Ficheros seleccionados", bootstyle=PRIMARY)
-        lbl_selected.pack(anchor="w")
-        self.selected_listbox = tk.Listbox(frame_right, selectmode=tk.SINGLE, height=22)
-        self.selected_listbox.pack(fill="both", expand=True, pady=5)
-        self.selected_listbox.bind('<Up>', self._on_selected_listbox_up)
-        self.selected_listbox.bind('<Down>', self._on_selected_listbox_down)
-        self.selected_listbox.bind('<Shift-Up>', self._on_selected_listbox_shift_up)
-        self.selected_listbox.bind('<Shift-Down>', self._on_selected_listbox_shift_down)
-        self.selected_listbox.bind('<Shift-Tab>', self._on_selected_listbox_shift_tab)
-        self.selected_listbox.bind('<Button-1>', self._on_selected_listbox_click)
-        self.selected_listbox.bind('<B1-Motion>', self._on_selected_listbox_drag)
-        self.selected_listbox.bind('<ButtonRelease-1>', self._on_selected_listbox_drop)
-        # Reorder buttons
-        btn_up = tb.Button(frame_right, text="↑ Subir", bootstyle=SECONDARY, command=self.move_up)
-        btn_up.pack(side="left", padx=5, pady=5)
-        btn_down = tb.Button(frame_right, text="↓ Bajar", bootstyle=SECONDARY, command=self.move_down)
-        btn_down.pack(side="left", padx=5, pady=5)
-        btn_remove = tb.Button(frame_right, text="Eliminar", bootstyle=DANGER, command=self.remove_selected)
-        btn_remove.pack(side="right", padx=5, pady=5)
+        center_layout.addStretch()
 
-    def _on_file_listbox_enter(self, event):
-        cur = self.file_listbox.curselection()
-        if cur:
-            idx = cur[0]
-            if idx < len(self.file_tooltips):
-                f = self.file_tooltips[idx]
-                if f not in self.selected_files:
-                    self.selected_files.append(f)
-                    self._refresh_selected_listbox()
-        return "break"
+        # Frame derecho - Archivos seleccionados
+        right_frame = QFrame()
+        right_frame.setFrameStyle(QFrame.Shape.StyledPanel)
+        right_frame.setMinimumWidth(280)
+        right_layout = QVBoxLayout(right_frame)
 
-    def _on_file_listbox_up(self, event):
-        cur = self.file_listbox.curselection()
-        if cur:
-            idx = cur[0]
-            new_idx = max(0, idx - 1)
-            self.file_listbox.selection_clear(0, tk.END)
-            self.file_listbox.selection_set(new_idx)
-            self.file_listbox.see(new_idx)
-        return "break"
+        # Etiqueta de seleccionados
+        lbl_selected = QLabel("Ficheros seleccionados")
+        lbl_selected.setStyleSheet("font-weight: bold; color: #2196F3; padding: 5px;")
+        right_layout.addWidget(lbl_selected)
 
-    def _on_file_listbox_down(self, event):
-        cur = self.file_listbox.curselection()
-        if cur:
-            idx = cur[0]
-            new_idx = min(self.file_listbox.size()-1, idx + 1)
-            if new_idx < self.file_listbox.size():
-                self.file_listbox.selection_clear(0, tk.END)
-                self.file_listbox.selection_set(new_idx)
-                self.file_listbox.see(new_idx)
-        return "break"
+        # Lista de seleccionados
+        self.selected_listbox = DragDropListWidget(show_tooltips=True)
+        self.selected_listbox.is_selected_list = True  # Marcar como lista de seleccionados
+        self.selected_listbox.setDragDropMode(QListWidget.DragDropMode.InternalMove)
+        right_layout.addWidget(self.selected_listbox)
 
-    def _on_file_listbox_tab(self, event):
-        # Mover el foco a la lista de la derecha
-        self.selected_listbox.focus_set()
-        if self.selected_listbox.size() > 0:
-            self.selected_listbox.selection_set(0)  # Seleccionar el primer archivo
-        return "break"
+        # Botones de control
+        buttons_layout = QHBoxLayout()
 
-    def _on_file_listbox_double_click(self, event):
-        # Añadir archivo con doble click
-        cur = self.file_listbox.curselection()
-        if cur:
-            idx = cur[0]
-            if idx < len(self.file_tooltips):
-                f = self.file_tooltips[idx]
-                if f not in self.selected_files:
-                    self.selected_files.append(f)
-                    self._refresh_selected_listbox()
-        return "break"
+        btn_up = QPushButton("↑ Subir")
+        btn_up.setStyleSheet("""
+            QPushButton {
+                background-color: #9E9E9E;
+                color: white;
+                padding: 5px 10px;
+                border: none;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #757575;
+            }
+        """)
+        btn_up.clicked.connect(self.move_up)
+        buttons_layout.addWidget(btn_up)
 
-    def _on_selected_listbox_up(self, event):
-        cur = self.selected_listbox.curselection()
-        if cur:
-            idx = cur[0]
-            new_idx = max(0, idx - 1)
-            self.selected_listbox.selection_clear(0, tk.END)
-            self.selected_listbox.selection_set(new_idx)
-            self.selected_listbox.see(new_idx)
-        return "break"
+        btn_down = QPushButton("↓ Bajar")
+        btn_down.setStyleSheet("""
+            QPushButton {
+                background-color: #9E9E9E;
+                color: white;
+                padding: 5px 10px;
+                border: none;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #757575;
+            }
+        """)
+        btn_down.clicked.connect(self.move_down)
+        buttons_layout.addWidget(btn_down)
 
-    def _on_selected_listbox_down(self, event):
-        cur = self.selected_listbox.curselection()
-        if cur:
-            idx = cur[0]
-            new_idx = min(self.selected_listbox.size()-1, idx + 1)
-            if new_idx < self.selected_listbox.size():
-                self.selected_listbox.selection_clear(0, tk.END)
-                self.selected_listbox.selection_set(new_idx)
-                self.selected_listbox.see(new_idx)
-        return "break"
+        buttons_layout.addStretch()
 
-    def _on_selected_listbox_shift_up(self, event):
-        cur = self.selected_listbox.curselection()
-        if cur:
-            idx = cur[0]
-            if idx > 0:
-                # Reordenar en la lista interna
-                self.selected_files[idx-1], self.selected_files[idx] = self.selected_files[idx], self.selected_files[idx-1]
-                self._refresh_selected_listbox()
-                # Mantener selección en el nuevo índice
-                self.selected_listbox.selection_set(idx - 1)
-                self.selected_listbox.see(idx - 1)
-        return "break"
+        btn_remove = QPushButton("Eliminar")
+        btn_remove.setStyleSheet("""
+            QPushButton {
+                background-color: #F44336;
+                color: white;
+                padding: 5px 10px;
+                border: none;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #D32F2F;
+            }
+        """)
+        btn_remove.clicked.connect(self.remove_selected)
+        buttons_layout.addWidget(btn_remove)
 
-    def _on_selected_listbox_shift_down(self, event):
-        cur = self.selected_listbox.curselection()
-        if cur:
-            idx = cur[0]
-            if idx < len(self.selected_files) - 1:
-                # Reordenar en la lista interna
-                self.selected_files[idx+1], self.selected_files[idx] = self.selected_files[idx], self.selected_files[idx+1]
-                self._refresh_selected_listbox()
-                # Mantener selección en el nuevo índice
-                self.selected_listbox.selection_set(idx + 1)
-                self.selected_listbox.see(idx + 1)
-        return "break"
+        right_layout.addLayout(buttons_layout)
 
-    def _on_selected_listbox_shift_tab(self, event):
-        # Mover el foco a la lista de la izquierda
-        self.file_listbox.focus_set()
-        if self.file_listbox.size() > 0:
-            self.file_listbox.selection_set(0)  # Seleccionar el primer archivo
-        return "break"
+        # Agregar frames al layout principal
+        main_layout.addWidget(left_frame)
+        main_layout.addWidget(center_frame)
+        main_layout.addWidget(right_frame)
 
-    def _on_selected_listbox_click(self, event):
-        # Iniciar drag & drop en la lista de seleccionados
-        index = self.selected_listbox.nearest(event.y)
-        if index >= 0 and index < self.selected_listbox.size():
-            self.drag_start_index = index
-            self.drag_data = self.selected_files[index]
-            self.selected_listbox.selection_clear(0, tk.END)
-            self.selected_listbox.selection_set(index)
+        # Establecer proporciones
+        main_layout.setStretch(0, 2)  # Frame izquierdo
+        main_layout.setStretch(1, 0)  # Frame central
+        main_layout.setStretch(2, 2)  # Frame derecho
 
-    def _on_selected_listbox_drag(self, event):
-        # Durante el arrastre, mostrar la posición donde se soltaría
-        if self.drag_start_index is not None:
-            index = self.selected_listbox.nearest(event.y)
-            if index >= 0 and index < self.selected_listbox.size():
-                self.selected_listbox.selection_clear(0, tk.END)
-                self.selected_listbox.selection_set(index)
+    def populate_file_list(self):
+        """Poblar la lista de archivos PDF"""
+        self.file_listbox.clear()
+        self.file_tooltips.clear()
 
-    def _on_selected_listbox_drop(self, event):
-        # Soltar y reordenar en la lista de seleccionados
-        if self.drag_start_index is not None:
-            drop_index = self.selected_listbox.nearest(event.y)
-            if drop_index >= 0 and drop_index < len(self.selected_files) and drop_index != self.drag_start_index:
-                # Reordenar los elementos en la lista interna
-                item = self.selected_files.pop(self.drag_start_index)
-                self.selected_files.insert(drop_index, item)
+        try:
+            pdfs = [f for f in os.listdir('.') if f.lower().endswith('.pdf')]
 
-                # Actualizar la interfaz
-                self._refresh_selected_listbox()
-                self.selected_listbox.selection_set(drop_index)
+            for i, filename in enumerate(sorted(pdfs)):
+                # Extraer título usando TextProcessor
+                title = TextProcessor.extract_title(filename)
 
-        # Limpiar variables de drag & drop
-        self.drag_start_index = None
-        self.drag_data = None
+                # Añadir elemento a la lista con solo el título
+                item = QListWidgetItem(title)
+                self.file_listbox.addItem(item)
 
-    def _populate_file_list(self):
-        self.file_listbox.delete(0, tk.END)
-        pdfs = [f for f in os.listdir('.') if f.lower().endswith('.pdf')]
-        self.file_tooltips = {}  # Diccionario para mapear índices a nombres de archivos
+                # Guardar mapeo para tooltip
+                self.file_tooltips[i] = filename
 
-        for i, f in enumerate(sorted(pdfs)):
-            # Insertar solo el título extraído
-            title = TextProcessor.extract_title(f)
-            self.file_listbox.insert(tk.END, title)
-            # Guardar el mapeo de índice a nombre de archivo para el tooltip
-            self.file_tooltips[i] = f
+            # Establecer tooltips en la lista
+            self.file_listbox.set_tooltips(self.file_tooltips)
 
-        # Crear tooltip para la lista de archivos
-        self._create_file_tooltip()
-
-    def _create_file_tooltip(self):
-        def show_tooltip(event):
-            # Obtener el índice del elemento bajo el cursor
-            index = self.file_listbox.nearest(event.y)
-            if 0 <= index < len(self.file_tooltips):
-                filename = self.file_tooltips[index]
-                # Crear tooltip temporal
-                tooltip = tk.Toplevel()
-                tooltip.wm_overrideredirect(True)
-                tooltip.wm_geometry(f"+{event.x_root + 10}+{event.y_root + 10}")
-                label = tk.Label(tooltip, text=f"📄 {filename}",
-                               background="lightyellow", relief="solid", borderwidth=1,
-                               font=("Arial", 9))
-                label.pack()
-
-                # Guardar referencia al tooltip
-                self.current_tooltip = tooltip
-
-                # Programar destrucción del tooltip después de 3 segundos
-                self.after(3000, lambda: tooltip.destroy() if tooltip.winfo_exists() else None)
-
-        def hide_tooltip(event):
-            if hasattr(self, 'current_tooltip') and self.current_tooltip.winfo_exists():
-                self.current_tooltip.destroy()
-
-        # Vincular eventos de mouse
-        self.file_listbox.bind('<Motion>', show_tooltip)
-        self.file_listbox.bind('<Leave>', hide_tooltip)
+        except Exception as e:
+            QMessageBox.warning(self, "Advertencia", f"Error al cargar archivos: {e}")
 
     def add_selected_files(self):
-        selected_indices = self.file_listbox.curselection()
-        for idx in selected_indices:
-            if idx < len(self.file_tooltips):
-                filename = self.file_tooltips[idx]
+        """Añadir archivos seleccionados a la lista de la derecha"""
+        selected_items = self.file_listbox.selectedItems()
+
+        for item in selected_items:
+            row = self.file_listbox.row(item)
+            if row in self.file_tooltips:
+                filename = self.file_tooltips[row]
                 if filename not in self.selected_files:
                     self.selected_files.append(filename)
-                    self._refresh_selected_listbox()
+
+        self.refresh_selected_listbox()
+
+    def on_file_double_click(self, item):
+        """Manejar doble click en archivo"""
+        row = self.file_listbox.row(item)
+        if row in self.file_tooltips:
+            filename = self.file_tooltips[row]
+            if filename not in self.selected_files:
+                self.selected_files.append(filename)
+                self.refresh_selected_listbox()
+
+    def refresh_selected_listbox(self):
+        """Actualizar la lista de archivos seleccionados"""
+        self.selected_listbox.clear()
+        self.selected_tooltips.clear()
+
+        for i, filename in enumerate(self.selected_files):
+            # Extraer título
+            title = TextProcessor.extract_title(filename)
+
+            # Añadir elemento con solo el título
+            item = QListWidgetItem(title)
+            self.selected_listbox.addItem(item)
+
+            # Guardar mapeo para tooltip
+            self.selected_tooltips[i] = filename
+
+        # Establecer tooltips
+        self.selected_listbox.set_tooltips(self.selected_tooltips)
 
     def remove_selected(self):
-        idx = self.selected_listbox.curselection()
-        if idx:
-            selected_idx = idx[0]
-            if selected_idx < len(self.selected_files):
-                self.selected_files.pop(selected_idx)
-                self._refresh_selected_listbox()
+        """Eliminar archivo seleccionado de la lista"""
+        current_row = self.selected_listbox.currentRow()
+        if current_row >= 0 and current_row < len(self.selected_files):
+            self.selected_files.pop(current_row)
+            self.refresh_selected_listbox()
 
     def move_up(self):
-        idx = self.selected_listbox.curselection()
-        if idx:
-            selected_idx = idx[0]
-            if selected_idx > 0:
-                self.selected_files[selected_idx-1], self.selected_files[selected_idx] = self.selected_files[selected_idx], self.selected_files[selected_idx-1]
-                self._refresh_selected_listbox()
-                self.selected_listbox.selection_set(selected_idx - 1)
+        """Mover archivo hacia arriba en la lista"""
+        current_row = self.selected_listbox.currentRow()
+        if current_row > 0:
+            # Intercambiar elementos
+            self.selected_files[current_row], self.selected_files[current_row-1] = \
+                self.selected_files[current_row-1], self.selected_files[current_row]
+
+            # Actualizar lista y mantener selección
+            self.refresh_selected_listbox()
+            self.selected_listbox.setCurrentRow(current_row - 1)
 
     def move_down(self):
-        idx = self.selected_listbox.curselection()
-        if idx:
-            selected_idx = idx[0]
-            if selected_idx < len(self.selected_files) - 1:
-                self.selected_files[selected_idx+1], self.selected_files[selected_idx] = self.selected_files[selected_idx], self.selected_files[selected_idx+1]
-                self._refresh_selected_listbox()
-                self.selected_listbox.selection_set(selected_idx + 1)
+        """Mover archivo hacia abajo en la lista"""
+        current_row = self.selected_listbox.currentRow()
+        if current_row >= 0 and current_row < len(self.selected_files) - 1:
+            # Intercambiar elementos
+            self.selected_files[current_row], self.selected_files[current_row+1] = \
+                self.selected_files[current_row+1], self.selected_files[current_row]
 
-    def _refresh_selected_listbox(self):
-        self.selected_listbox.delete(0, tk.END)
-        self.selected_tooltips = {}  # Diccionario para mapear índices a nombres de archivos
-
-        for i, f in enumerate(self.selected_files):
-            # Insertar solo el título extraído
-            title = TextProcessor.extract_title(f)
-            self.selected_listbox.insert(tk.END, title)
-            # Guardar el mapeo de índice a nombre de archivo para el tooltip
-            self.selected_tooltips[i] = f
-
-        # Crear tooltip para la lista de seleccionados si no existe
-        if not hasattr(self, 'selected_tooltip_created'):
-            self._create_selected_tooltip()
-            self.selected_tooltip_created = True
-
-    def _create_selected_tooltip(self):
-        def show_selected_tooltip(event):
-            # Obtener el índice del elemento bajo el cursor
-            index = self.selected_listbox.nearest(event.y)
-            if 0 <= index < len(self.selected_tooltips):
-                filename = self.selected_tooltips[index]
-                # Crear tooltip temporal
-                tooltip = tk.Toplevel()
-                tooltip.wm_overrideredirect(True)
-                tooltip.wm_geometry(f"+{event.x_root + 10}+{event.y_root + 10}")
-                label = tk.Label(tooltip, text=f"📄 {filename}",
-                               background="lightyellow", relief="solid", borderwidth=1,
-                               font=("Arial", 9))
-                label.pack()
-
-                # Guardar referencia al tooltip
-                self.current_selected_tooltip = tooltip
-
-                # Programar destrucción del tooltip después de 3 segundos
-                self.after(3000, lambda: tooltip.destroy() if tooltip.winfo_exists() else None)
-
-        def hide_selected_tooltip(event):
-            if hasattr(self, 'current_selected_tooltip') and self.current_selected_tooltip.winfo_exists():
-                self.current_selected_tooltip.destroy()
-
-        # Vincular eventos de mouse
-        self.selected_listbox.bind('<Motion>', show_selected_tooltip)
-        self.selected_listbox.bind('<Leave>', hide_selected_tooltip)
+            # Actualizar lista y mantener selección
+            self.refresh_selected_listbox()
+            self.selected_listbox.setCurrentRow(current_row + 1)
 
     def combine_pdfs(self):
+        """Combinar los PDFs seleccionados"""
         if not self.selected_files:
-            messagebox.showwarning("Advertencia", "No hay ficheros seleccionados.")
+            QMessageBox.warning(self, "Advertencia", "No hay ficheros seleccionados.")
             return
-        output = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF files", "*.pdf")], title="Guardar PDF combinado")
-        if not output:
+
+        # Diálogo para guardar archivo
+        output_file, _ = QFileDialog.getSaveFileName(
+            self,
+            "Guardar PDF combinado",
+            "",
+            "PDF files (*.pdf)"
+        )
+
+        if not output_file:
             return
 
         try:
-            # Generar títulos automáticamente basados en los nombres de archivo
+            # Generar títulos automáticamente
             titles = [TextProcessor.extract_title(f) for f in self.selected_files]
 
             # Crear combinador avanzado
             combiner = AdvancedPDFCombiner(self.selected_files, titles)
 
-            # Combinar con o sin índice según la opción seleccionada
-            if self.create_index_var.get():
-                final_file = combiner.combine_with_index(output)
-                messagebox.showinfo("Éxito", f"PDF combinado con índice interactivo guardado como:\n{final_file}")
+            # Combinar con o sin índice
+            if self.create_index_checkbox.isChecked():
+                final_file = combiner.combine_with_index(output_file)
+                QMessageBox.information(
+                    self,
+                    "Éxito",
+                    f"PDF combinado con índice interactivo guardado como:\n{final_file}"
+                )
             else:
-                final_file = combiner.combine_simple(output)
-                messagebox.showinfo("Éxito", f"PDF combinado guardado como:\n{final_file}")
+                final_file = combiner.combine_simple(output_file)
+                QMessageBox.information(
+                    self,
+                    "Éxito",
+                    f"PDF combinado guardado como:\n{final_file}"
+                )
 
         except Exception as e:
-            messagebox.showerror("Error", f"No se pudo combinar los PDFs:\n{e}")
+            QMessageBox.critical(self, "Error", f"No se pudo combinar los PDFs:\n{e}")
             import traceback
             traceback.print_exc()
 
+    def keyPressEvent(self, event):
+        """Manejar eventos de teclado"""
+        # Tab para cambiar entre listas
+        if event.key() == Qt.Key.Key_Tab:
+            if self.file_listbox.hasFocus():
+                self.selected_listbox.setFocus()
+                if self.selected_listbox.count() > 0:
+                    self.selected_listbox.setCurrentRow(0)
+            elif self.selected_listbox.hasFocus():
+                self.file_listbox.setFocus()
+                if self.file_listbox.count() > 0:
+                    self.file_listbox.setCurrentRow(0)
+
+        # Enter para añadir archivos
+        elif event.key() == Qt.Key.Key_Return and self.file_listbox.hasFocus():
+            self.add_selected_files()
+
+        # Shift + flechas para reordenar en lista de seleccionados
+        elif (event.modifiers() & Qt.KeyboardModifier.ShiftModifier and
+              self.selected_listbox.hasFocus()):
+            if event.key() == Qt.Key.Key_Up:
+                self.move_up()
+            elif event.key() == Qt.Key.Key_Down:
+                self.move_down()
+
+        else:
+            super().keyPressEvent(event)
+
+def main():
+    app = QApplication(sys.argv)
+
+    # Establecer estilo oscuro moderno
+    app.setStyleSheet("""
+        QMainWindow {
+            background-color: #2b2b2b;
+            color: #ffffff;
+        }
+        QFrame {
+            background-color: #3c3c3c;
+            border: 1px solid #555555;
+            border-radius: 5px;
+        }
+        QListWidget {
+            background-color: #404040;
+            color: #ffffff;
+            border: 1px solid #555555;
+            border-radius: 3px;
+            padding: 5px;
+            selection-background-color: #0078d4;
+        }
+        QListWidget::item {
+            padding: 8px;
+            border-bottom: 1px solid #555555;
+        }
+        QListWidget::item:selected {
+            background-color: #0078d4;
+        }
+        QListWidget::item:hover {
+            background-color: #505050;
+        }
+        QLabel {
+            color: #ffffff;
+        }
+        QCheckBox {
+            color: #ffffff;
+        }
+        QCheckBox::indicator {
+            width: 16px;
+            height: 16px;
+        }
+        QCheckBox::indicator:unchecked {
+            background-color: #404040;
+            border: 2px solid #555555;
+        }
+        QCheckBox::indicator:checked {
+            background-color: #0078d4;
+            border: 2px solid #0078d4;
+        }
+    """)
+
+    window = PDFCombinerGUI()
+    window.show()
+
+    return app.exec()
+
 if __name__ == "__main__":
-    app = PDFCombinerGUI()
-    app.mainloop()
+    if len(sys.argv) == 1:
+        sys.exit(main())
+    else:
+        # Mantener compatibilidad con uso como módulo
+        app = PDFCombinerGUI()
+        app.mainloop = lambda: main()
