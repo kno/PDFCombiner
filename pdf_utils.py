@@ -108,7 +108,7 @@ class IndexGenerator:
     def create_index(start_pages, titles):
         """Create index page with clickable links."""
         canvas, letter, blue, black, colors, stringWidth = _get_reportlab()
-        
+
         buffer = BytesIO()
         c = canvas.Canvas(buffer, pagesize=letter)
         width, height = letter
@@ -158,7 +158,7 @@ class LinkProcessor:
         """Add clickable links to index page."""
         fitz = _get_fitz()
         canvas, letter, blue, black, colors, stringWidth = _get_reportlab()
-        
+
         doc = fitz.open(pdf_file)
         page = doc[0]
         page_height = page.rect.height
@@ -258,7 +258,7 @@ class AdvancedPDFCombiner:
     def combine_simple(self, output_path):
         """Simple PDF combination without index."""
         merger = PyPDF2.PdfWriter()
-        
+
         for pdf_file in self.files:
             with open(pdf_file, 'rb') as file:
                 reader = PyPDF2.PdfReader(file)
