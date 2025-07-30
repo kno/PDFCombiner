@@ -4,6 +4,7 @@ from tkinter import ttk, filedialog, messagebox
 import ttkbootstrap as tb
 from ttkbootstrap.constants import *
 from PyPDF2 import PdfWriter, PdfReader
+from pdf_utils import AdvancedPDFCombiner, TextProcessor
 
 class PDFCombinerGUI(tb.Window):
     def __init__(self):
@@ -44,6 +45,13 @@ class PDFCombinerGUI(tb.Window):
         frame_center.grid(row=0, column=1, sticky="ns", pady=10)
         btn_add = tb.Button(frame_center, text="Añadir →", bootstyle=SUCCESS, command=self.add_selected_files)
         btn_add.pack(pady=(100,10))
+        
+        # Checkbox para índice
+        self.create_index_var = tk.BooleanVar(value=True)
+        chk_index = tb.Checkbutton(frame_center, text="Crear índice interactivo", 
+                                  variable=self.create_index_var, bootstyle=INFO)
+        chk_index.pack(pady=5)
+        
         btn_combine = tb.Button(frame_center, text="Combinar PDFs", bootstyle=INFO, command=self.combine_pdfs)
         btn_combine.pack(pady=10)
 
@@ -248,18 +256,26 @@ class PDFCombinerGUI(tb.Window):
         output = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF files", "*.pdf")], title="Guardar PDF combinado")
         if not output:
             return
+        
         try:
-            merger = PdfWriter()
-            for f in self.selected_files:
-                with open(f, 'rb') as pdf:
-                    reader = PdfReader(pdf)
-                    for page in reader.pages:
-                        merger.add_page(page)
-            with open(output, 'wb') as out:
-                merger.write(out)
-            messagebox.showinfo("Éxito", f"PDF combinado guardado como:\n{output}")
+            # Generar títulos automáticamente basados en los nombres de archivo
+            titles = [TextProcessor.extract_title(f) for f in self.selected_files]
+            
+            # Crear combinador avanzado
+            combiner = AdvancedPDFCombiner(self.selected_files, titles)
+            
+            # Combinar con o sin índice según la opción seleccionada
+            if self.create_index_var.get():
+                final_file = combiner.combine_with_index(output)
+                messagebox.showinfo("Éxito", f"PDF combinado con índice interactivo guardado como:\n{final_file}")
+            else:
+                final_file = combiner.combine_simple(output)
+                messagebox.showinfo("Éxito", f"PDF combinado guardado como:\n{final_file}")
+                
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo combinar los PDFs:\n{e}")
+            import traceback
+            traceback.print_exc()
 
 if __name__ == "__main__":
     app = PDFCombinerGUI()
