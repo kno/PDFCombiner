@@ -12,6 +12,9 @@ class PDFCombinerGUI(tb.Window):
         self.geometry("900x500")
         self.resizable(False, False)
         self.selected_files = []
+        # Variables para el drag & drop
+        self.drag_start_index = None
+        self.drag_data = None
         self._setup_ui()
 
     def _setup_ui(self):
@@ -33,6 +36,7 @@ class PDFCombinerGUI(tb.Window):
         self.file_listbox.bind('<Down>', self._on_file_listbox_down)
         self.file_listbox.bind('<Return>', self._on_file_listbox_enter)
         self.file_listbox.bind('<Tab>', self._on_file_listbox_tab)
+        self.file_listbox.bind('<Double-Button-1>', self._on_file_listbox_double_click)
         self.file_listbox.focus_set()
 
         # Center controls
@@ -55,6 +59,9 @@ class PDFCombinerGUI(tb.Window):
         self.selected_listbox.bind('<Shift-Up>', self._on_selected_listbox_shift_up)
         self.selected_listbox.bind('<Shift-Down>', self._on_selected_listbox_shift_down)
         self.selected_listbox.bind('<Shift-Tab>', self._on_selected_listbox_shift_tab)
+        self.selected_listbox.bind('<Button-1>', self._on_selected_listbox_click)
+        self.selected_listbox.bind('<B1-Motion>', self._on_selected_listbox_drag)
+        self.selected_listbox.bind('<ButtonRelease-1>', self._on_selected_listbox_drop)
         # Reorder buttons
         btn_up = tb.Button(frame_right, text="↑ Subir", bootstyle=SECONDARY, command=self.move_up)
         btn_up.pack(side="left", padx=5, pady=5)
@@ -98,6 +105,16 @@ class PDFCombinerGUI(tb.Window):
         self.selected_listbox.focus_set()
         if self.selected_listbox.size() > 0:
             self.selected_listbox.selection_set(0)
+        return "break"
+
+    def _on_file_listbox_double_click(self, event):
+        # Añadir archivo con doble click
+        cur = self.file_listbox.curselection()
+        if cur:
+            f = self.file_listbox.get(cur[0])
+            if f not in self.selected_files:
+                self.selected_files.append(f)
+                self.selected_listbox.insert(tk.END, f)
         return "break"
 
     def _on_selected_listbox_up(self, event):
@@ -148,6 +165,40 @@ class PDFCombinerGUI(tb.Window):
         if self.file_listbox.size() > 0:
             self.file_listbox.selection_set(0)
         return "break"
+
+    def _on_selected_listbox_click(self, event):
+        # Iniciar drag & drop en la lista de seleccionados
+        index = self.selected_listbox.nearest(event.y)
+        if index >= 0 and index < self.selected_listbox.size():
+            self.drag_start_index = index
+            self.drag_data = self.selected_files[index]
+            self.selected_listbox.selection_clear(0, tk.END)
+            self.selected_listbox.selection_set(index)
+
+    def _on_selected_listbox_drag(self, event):
+        # Durante el arrastre, mostrar la posición donde se soltaría
+        if self.drag_start_index is not None:
+            index = self.selected_listbox.nearest(event.y)
+            if index >= 0 and index < self.selected_listbox.size():
+                self.selected_listbox.selection_clear(0, tk.END)
+                self.selected_listbox.selection_set(index)
+
+    def _on_selected_listbox_drop(self, event):
+        # Soltar y reordenar en la lista de seleccionados
+        if self.drag_start_index is not None:
+            drop_index = self.selected_listbox.nearest(event.y)
+            if drop_index >= 0 and drop_index < len(self.selected_files) and drop_index != self.drag_start_index:
+                # Reordenar los elementos en la lista interna
+                item = self.selected_files.pop(self.drag_start_index)
+                self.selected_files.insert(drop_index, item)
+
+                # Actualizar la interfaz
+                self._refresh_selected_listbox()
+                self.selected_listbox.selection_set(drop_index)
+
+        # Limpiar variables de drag & drop
+        self.drag_start_index = None
+        self.drag_data = None
 
     def _populate_file_list(self):
         self.file_listbox.delete(0, tk.END)
