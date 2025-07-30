@@ -13,3 +13,7 @@ reportlab==4.4.3
 
 # Image processing (required by reportlab)
 pillow==11.3.0
+
+# GUI libraries
+ttkbootstrap==1.10.1
+tkinter-tooltip==2.1.0
