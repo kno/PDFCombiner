@@ -51,6 +51,8 @@ class PDFCombinerGUI(tb.Window):
         self.selected_listbox.pack(fill="both", expand=True, pady=5)
         self.selected_listbox.bind('<Up>', self._on_selected_listbox_up)
         self.selected_listbox.bind('<Down>', self._on_selected_listbox_down)
+        self.selected_listbox.bind('<Shift-Up>', self._on_selected_listbox_shift_up)
+        self.selected_listbox.bind('<Shift-Down>', self._on_selected_listbox_shift_down)
         # Reorder buttons
         btn_up = tb.Button(frame_right, text="↑ Subir", bootstyle=SECONDARY, command=self.move_up)
         btn_up.pack(side="left", padx=5, pady=5)
@@ -107,6 +109,28 @@ class PDFCombinerGUI(tb.Window):
                 self.selected_listbox.selection_clear(0, tk.END)
                 self.selected_listbox.selection_set(idx+1)
                 self.selected_listbox.see(idx+1)
+        return "break"
+
+    def _on_selected_listbox_shift_up(self, event):
+        cur = self.selected_listbox.curselection()
+        if cur and cur[0] > 0:
+            idx = cur[0]
+            # Reordenar en la lista interna y actualizar la interfaz
+            self.selected_files[idx-1], self.selected_files[idx] = self.selected_files[idx], self.selected_files[idx-1]
+            self._refresh_selected_listbox()
+            self.selected_listbox.selection_set(idx-1)
+            self.selected_listbox.see(idx-1)
+        return "break"
+
+    def _on_selected_listbox_shift_down(self, event):
+        cur = self.selected_listbox.curselection()
+        if cur and cur[0] < len(self.selected_files)-1:
+            idx = cur[0]
+            # Reordenar en la lista interna y actualizar la interfaz
+            self.selected_files[idx+1], self.selected_files[idx] = self.selected_files[idx], self.selected_files[idx+1]
+            self._refresh_selected_listbox()
+            self.selected_listbox.selection_set(idx+1)
+            self.selected_listbox.see(idx+1)
         return "break"
 
     def _populate_file_list(self):
