@@ -143,6 +143,7 @@ class PDFCombinerGUI(QMainWindow):
         self.selected_listbox = DragDropListWidget(show_tooltips=True)
         self.selected_listbox.is_selected_list = True  # Marcar como lista de seleccionados
         self.selected_listbox.setDragDropMode(QListWidget.DragDropMode.InternalMove)
+        self.selected_listbox.itemDoubleClicked.connect(self.on_selected_double_click)
         right_layout.addWidget(self.selected_listbox)
 
         # Botones de control
@@ -256,6 +257,13 @@ class PDFCombinerGUI(QMainWindow):
             if filename not in self.selected_files:
                 self.selected_files.append(filename)
                 self.refresh_selected_listbox()
+
+    def on_selected_double_click(self, item):
+        """Manejar doble click en archivo seleccionado para eliminarlo"""
+        row = self.selected_listbox.row(item)
+        if 0 <= row < len(self.selected_files):
+            self.selected_files.pop(row)
+            self.refresh_selected_listbox()
 
     def refresh_selected_listbox(self):
         """Actualizar la lista de archivos seleccionados"""
