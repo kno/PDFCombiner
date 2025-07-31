@@ -5,8 +5,8 @@ from typing import List, Dict, Optional, Set
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
-    QTreeView, QTableView, QLabel, QComboBox, QPushButton,
-    QFrame, QHeaderView, QMessageBox, QFileDialog
+    QTreeView, QListView, QLabel, QPushButton,
+    QFrame, QHeaderView, QMessageBox, QFileDialog, QCheckBox
 )
 from PyQt6.QtCore import (
     Qt, QModelIndex, pyqtSignal,
@@ -35,11 +35,10 @@ class PDFFilterModel(QSortFilterProxyModel):
         return filename.lower().endswith('.pdf')
 
 class SelectedFilesModel(QStandardItemModel):
-    """Modelo para archivos seleccionados con información detallada"""
+    """Modelo para archivos seleccionados - solo títulos"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setHorizontalHeaderLabels(['Título', 'Archivo', 'Tamaño', 'Ruta'])
         self.selected_files: List[str] = []
 
     def add_file(self, file_path: str) -> bool:
@@ -49,29 +48,17 @@ class SelectedFilesModel(QStandardItemModel):
 
         self.selected_files.append(file_path)
 
-        # Crear elementos para la fila
+        # Crear elemento solo con título
         path_obj = Path(file_path)
         title = TextProcessor.extract_title(path_obj.name)
-        filename = path_obj.name
 
-        # Obtener tamaño del archivo
-        try:
-            size = path_obj.stat().st_size
-            size_str = self._format_file_size(size)
-        except OSError:
-            size_str = "N/A"
-
-        # Crear items
+        # Crear item
         title_item = QStandardItem(title)
         title_item.setData(file_path, Qt.ItemDataRole.UserRole)
         title_item.setIcon(self._get_pdf_icon())
 
-        filename_item = QStandardItem(filename)
-        size_item = QStandardItem(size_str)
-        path_item = QStandardItem(str(path_obj.parent))
-
-        # Agregar fila
-        self.appendRow([title_item, filename_item, size_item, path_item])
+        # Agregar item
+        self.appendRow(title_item)
         return True
 
     def remove_file(self, row: int) -> bool:
@@ -102,20 +89,10 @@ class SelectedFilesModel(QStandardItemModel):
         """Limpiar todos los archivos seleccionados"""
         self.selected_files.clear()
         self.clear()
-        self.setHorizontalHeaderLabels(['Título', 'Archivo', 'Tamaño', 'Ruta'])
 
     def get_selected_files(self) -> List[str]:
         """Obtener lista de archivos seleccionados"""
         return self.selected_files.copy()
-
-    def _format_file_size(self, size_bytes: int) -> str:
-        """Formatear tamaño de archivo"""
-        if size_bytes < 1024:
-            return f"{size_bytes} B"
-        elif size_bytes < 1024 * 1024:
-            return f"{size_bytes / 1024:.1f} KB"
-        else:
-            return f"{size_bytes / (1024 * 1024):.1f} MB"
 
     def _get_pdf_icon(self) -> QIcon:
         """Crear icono para archivos PDF"""
@@ -139,6 +116,7 @@ class FileManagerWidget(QWidget):
     # Señales
     files_selected = pyqtSignal(list)  # Emitida cuando cambian los archivos seleccionados
     current_directory_changed = pyqtSignal(str)  # Emitida cuando cambia el directorio
+    combine_requested = pyqtSignal()  # Emitida cuando se solicita combinar PDFs
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -157,7 +135,7 @@ class FileManagerWidget(QWidget):
         # Header con información del directorio actual
         self._create_header_section(layout)
 
-        # Splitter principal
+        # Splitter principal con ambas listas
         splitter = QSplitter(Qt.Orientation.Horizontal)
         layout.addWidget(splitter)
 
@@ -169,10 +147,13 @@ class FileManagerWidget(QWidget):
         right_panel = self._create_selected_files_panel()
         splitter.addWidget(right_panel)
 
-        # Configurar proporciones del splitter
+        # Configurar proporciones del splitter - ambos paneles iguales
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 1)
         splitter.setSizes([400, 400])
+
+        # Sección de controles debajo de ambas listas
+        self._create_controls_section(layout)
 
     def _create_header_section(self, layout: QVBoxLayout):
         """Crear sección de header con información del directorio"""
@@ -254,8 +235,81 @@ class FileManagerWidget(QWidget):
         header_layout.addLayout(dir_layout)
         layout.addWidget(header_frame)
 
+    def _create_controls_section(self, layout: QVBoxLayout):
+        """Crear sección de controles debajo de las listas"""
+        controls_frame = QFrame()
+        controls_frame.setFrameStyle(QFrame.Shape.StyledPanel)
+        controls_layout = QHBoxLayout(controls_frame)
+
+        # Espaciado
+        controls_layout.addStretch()
+
+        # Checkbox para crear índice interactivo
+        self.create_index_checkbox = QCheckBox("Crear índice interactivo")
+        self.create_index_checkbox.setChecked(True)
+        self.create_index_checkbox.setStyleSheet("""
+            QCheckBox {
+                color: palette(text);
+                font-weight: bold;
+                padding: 8px;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+            }
+            QCheckBox::indicator:unchecked {
+                border: 2px solid palette(mid);
+                background-color: palette(base);
+                border-radius: 3px;
+            }
+            QCheckBox::indicator:checked {
+                border: 2px solid #2196F3;
+                background-color: #2196F3;
+                border-radius: 3px;
+                image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIHZpZXdCb3g9IjAgMCAxMCAxMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEuNSA1TDQgNy41TDguNSAyLjUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+);
+            }
+        """)
+        controls_layout.addWidget(self.create_index_checkbox)
+
+        # Espaciado
+        controls_layout.addSpacing(20)
+
+        # Botón combinar
+        self.combine_button = QPushButton("🔗 Combinar PDFs")
+        self.combine_button.setMinimumHeight(40)
+        self.combine_button.setEnabled(False)  # Inicialmente deshabilitado
+        self.combine_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2196F3;
+                color: white;
+                border: 2px solid #1976D2;
+                border-radius: 8px;
+                padding: 8px 20px;
+                font-weight: bold;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+                border-color: #1565C0;
+            }
+            QPushButton:pressed {
+                background-color: #1565C0;
+            }
+            QPushButton:disabled {
+                background-color: palette(window);
+                color: palette(disabled-text);
+                border-color: palette(midlight);
+            }
+        """)
+        controls_layout.addWidget(self.combine_button)
+
+        # Espaciado
+        controls_layout.addStretch()
+
+        layout.addWidget(controls_frame)
+
     def _create_directory_panel(self) -> QWidget:
-        """Crear panel de navegación por directorios"""
+        """Crear panel de navegación por directorios - solo vista de árbol"""
         panel = QFrame()
         panel.setFrameStyle(QFrame.Shape.StyledPanel)
         layout = QVBoxLayout(panel)
@@ -265,68 +319,12 @@ class FileManagerWidget(QWidget):
         title_label.setStyleSheet("font-weight: bold; color: #2196F3; padding: 5px;")
         layout.addWidget(title_label)
 
-        # Combo box para vista
-        view_layout = QHBoxLayout()
-        view_label = QLabel("Vista:")
-        view_label.setStyleSheet("""
-            QLabel {
-                color: palette(text);
-                font-weight: bold;
-                padding: 4px;
-            }
-        """)
-
-        self.view_combo = QComboBox()
-        self.view_combo.addItems(["Árbol", "Tabla"])
-        self.view_combo.setStyleSheet("""
-            QComboBox {
-                background-color: palette(button);
-                color: palette(button-text);
-                border: 2px solid palette(mid);
-                border-radius: 6px;
-                padding: 4px 8px;
-                font-weight: bold;
-                min-width: 80px;
-            }
-            QComboBox:hover {
-                border-color: palette(highlight);
-            }
-            QComboBox::drop-down {
-                border: none;
-                width: 20px;
-            }
-            QComboBox::down-arrow {
-                width: 12px;
-                height: 12px;
-            }
-            QComboBox QAbstractItemView {
-                background-color: palette(base);
-                color: palette(text);
-                border: 1px solid palette(mid);
-                selection-background-color: palette(highlight);
-                selection-color: palette(highlighted-text);
-            }
-        """)
-
-        view_layout.addWidget(view_label)
-        view_layout.addWidget(self.view_combo)
-        view_layout.addStretch()
-        layout.addLayout(view_layout)
-
-        # Stack de vistas
+        # Vista de árbol únicamente
         self.tree_view = QTreeView()
-        self.table_view = QTableView()
-
-        # Configurar vistas
         self._setup_tree_view()
-        self._setup_table_view()
-
-        # Agregar vistas (inicialmente mostrar árbol)
         layout.addWidget(self.tree_view)
-        layout.addWidget(self.table_view)
-        self.table_view.hide()
 
-        # Botones de acción
+        # Botón de agregar
         buttons_layout = QHBoxLayout()
         self.add_button = QPushButton("→ Agregar")
         self.add_button.setStyleSheet("""
@@ -360,7 +358,7 @@ class FileManagerWidget(QWidget):
         return panel
 
     def _create_selected_files_panel(self) -> QWidget:
-        """Crear panel de archivos seleccionados"""
+        """Crear panel de archivos seleccionados - solo títulos"""
         panel = QFrame()
         panel.setFrameStyle(QFrame.Shape.StyledPanel)
         layout = QVBoxLayout(panel)
@@ -370,47 +368,34 @@ class FileManagerWidget(QWidget):
         title_label.setStyleSheet("font-weight: bold; color: #2196F3; padding: 5px;")
         layout.addWidget(title_label)
 
-        # Tabla de archivos seleccionados
-        self.selected_table = QTableView()
-        self.selected_table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-        self.selected_table.setAlternatingRowColors(True)
+        # Lista de archivos seleccionados
+        self.selected_list = QListView()
+        self.selected_list.setAlternatingRowColors(True)
 
-        # Estilos para la tabla de seleccionados
-        self.selected_table.setStyleSheet("""
-            QTableView {
+        # Estilos para la lista de seleccionados
+        self.selected_list.setStyleSheet("""
+            QListView {
                 background-color: palette(base);
                 color: palette(text);
                 border: 1px solid palette(mid);
                 selection-background-color: palette(highlight);
                 selection-color: palette(highlighted-text);
                 alternate-background-color: palette(alternate-base);
-                gridline-color: palette(midlight);
             }
-            QTableView::item {
+            QListView::item {
                 padding: 8px;
                 border-bottom: 1px solid palette(midlight);
             }
-            QTableView::item:selected {
+            QListView::item:selected {
                 background-color: palette(highlight);
                 color: palette(highlighted-text);
                 font-weight: bold;
             }
-            QTableView::item:hover {
-                background-color: palette(light);
-            }
-            QHeaderView::section {
-                background-color: palette(button);
-                color: palette(button-text);
-                padding: 10px;
-                border: 1px solid palette(mid);
-                font-weight: bold;
-                font-size: 11px;
-            }
-            QHeaderView::section:hover {
+            QListView::item:hover {
                 background-color: palette(light);
             }
         """)
-        layout.addWidget(self.selected_table)
+        layout.addWidget(self.selected_list)
 
         # Botones de control
         buttons_layout = QHBoxLayout()
@@ -517,52 +502,6 @@ class FileManagerWidget(QWidget):
             }
         """)
 
-    def _setup_table_view(self):
-        """Configurar vista de tabla"""
-        self.table_view.setAlternatingRowColors(True)
-        self.table_view.setSortingEnabled(True)
-        self.table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-        self.table_view.setSelectionMode(QTableView.SelectionMode.ExtendedSelection)
-
-        # Configurar headers
-        header = self.table_view.horizontalHeader()
-        header.setStretchLastSection(True)
-        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-
-        # Estilos adaptativos para tema oscuro
-        self.table_view.setStyleSheet("""
-            QTableView {
-                background-color: palette(base);
-                color: palette(text);
-                border: 1px solid palette(mid);
-                selection-background-color: palette(highlight);
-                selection-color: palette(highlighted-text);
-                alternate-background-color: palette(alternate-base);
-                gridline-color: palette(midlight);
-            }
-            QTableView::item {
-                padding: 6px;
-                border-bottom: 1px solid palette(midlight);
-            }
-            QTableView::item:selected {
-                background-color: palette(highlight);
-                color: palette(highlighted-text);
-            }
-            QTableView::item:hover {
-                background-color: palette(light);
-            }
-            QHeaderView::section {
-                background-color: palette(button);
-                color: palette(button-text);
-                padding: 8px;
-                border: 1px solid palette(mid);
-                font-weight: bold;
-            }
-            QHeaderView::section:hover {
-                background-color: palette(light);
-            }
-        """)
-
     def _setup_models(self):
         """Configurar modelos de datos"""
         # Modelo del sistema de archivos
@@ -575,9 +514,8 @@ class FileManagerWidget(QWidget):
         self.filter_model = PDFFilterModel()
         self.filter_model.setSourceModel(self.fs_model)
 
-        # Configurar vistas con el modelo filtrado
+        # Configurar vista de árbol con el modelo filtrado
         self.tree_view.setModel(self.filter_model)
-        self.table_view.setModel(self.filter_model)
 
         # Ocultar columnas innecesarias en la vista de árbol
         for column in range(1, self.fs_model.columnCount()):
@@ -585,14 +523,7 @@ class FileManagerWidget(QWidget):
 
         # Modelo para archivos seleccionados
         self.selected_model = SelectedFilesModel()
-        self.selected_table.setModel(self.selected_model)
-
-        # Configurar tamaños de columnas
-        header = self.selected_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Título
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Archivo
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Tamaño
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)  # Ruta
+        self.selected_list.setModel(self.selected_model)
 
     def _setup_connections(self):
         """Configurar conexiones de señales"""
@@ -600,22 +531,17 @@ class FileManagerWidget(QWidget):
         self.up_button.clicked.connect(self._go_up_directory)
         self.browse_button.clicked.connect(self._browse_directory)
 
-        # Cambio de vista
-        self.view_combo.currentTextChanged.connect(self._toggle_view)
-
-        # Selección en vistas de archivos
+        # Selección en vista de archivos
         self.tree_view.selectionModel().selectionChanged.connect(self._on_file_selection_changed)
-        self.table_view.selectionModel().selectionChanged.connect(self._on_file_selection_changed)
 
         # Doble click para navegar/agregar
         self.tree_view.doubleClicked.connect(self._on_file_double_clicked)
-        self.table_view.doubleClicked.connect(self._on_file_double_clicked)
 
         # Botones de archivo
         self.add_button.clicked.connect(self._add_selected_files)
 
-        # Selección en tabla de archivos seleccionados
-        self.selected_table.selectionModel().selectionChanged.connect(self._on_selected_files_selection_changed)
+        # Selección en lista de archivos seleccionados
+        self.selected_list.selectionModel().selectionChanged.connect(self._on_selected_files_selection_changed)
 
         # Botones de control de archivos seleccionados
         self.move_up_button.clicked.connect(self._move_selected_up)
@@ -639,12 +565,10 @@ class FileManagerWidget(QWidget):
 
         self.current_dir_label.setText(f"📁 {display_path}")
 
-        # Configurar raíz de las vistas
+        # Configurar raíz de la vista de árbol
         root_index = self.fs_model.index(str(current_path))
         proxy_root = self.filter_model.mapFromSource(root_index)
-
         self.tree_view.setRootIndex(proxy_root)
-        self.table_view.setRootIndex(proxy_root)
 
         # Habilitar/deshabilitar botón de subir
         self.up_button.setEnabled(self.file_manager.can_go_up())
@@ -652,14 +576,22 @@ class FileManagerWidget(QWidget):
         # Emitir señal
         self.current_directory_changed.emit(str(current_path))
 
-    def _toggle_view(self, view_name: str):
-        """Alternar entre vista de árbol y tabla"""
-        if view_name == "Árbol":
-            self.table_view.hide()
-            self.tree_view.show()
-        else:
-            self.tree_view.hide()
-            self.table_view.show()
+    def _on_file_selection_changed(self):
+        """Manejar cambio de selección en archivos"""
+        selection = self.tree_view.selectionModel().selectedIndexes()
+
+        # Verificar si hay archivos PDF seleccionados
+        has_pdf_files = False
+        for index in selection:
+            if index.column() == 0:  # Solo considerar la primera columna
+                source_index = self.filter_model.mapToSource(index)
+                if not self.fs_model.isDir(source_index):
+                    file_path = self.fs_model.filePath(source_index)
+                    if file_path.lower().endswith('.pdf'):
+                        has_pdf_files = True
+                        break
+
+        self.add_button.setEnabled(has_pdf_files)
 
     def _go_up_directory(self):
         """Navegar al directorio padre"""
@@ -678,28 +610,6 @@ class FileManagerWidget(QWidget):
             if self.file_manager.set_current_directory(directory):
                 self._update_current_directory()
 
-    def _get_current_view(self) -> QTreeView:
-        """Obtener la vista actualmente visible"""
-        return self.tree_view if self.tree_view.isVisible() else self.table_view
-
-    def _on_file_selection_changed(self):
-        """Manejar cambio de selección en archivos"""
-        current_view = self._get_current_view()
-        selection = current_view.selectionModel().selectedIndexes()
-
-        # Verificar si hay archivos PDF seleccionados
-        has_pdf_files = False
-        for index in selection:
-            if index.column() == 0:  # Solo considerar la primera columna
-                source_index = self.filter_model.mapToSource(index)
-                if not self.fs_model.isDir(source_index):
-                    file_path = self.fs_model.filePath(source_index)
-                    if file_path.lower().endswith('.pdf'):
-                        has_pdf_files = True
-                        break
-
-        self.add_button.setEnabled(has_pdf_files)
-
     def _on_file_double_clicked(self, index: QModelIndex):
         """Manejar doble click en archivo o directorio"""
         source_index = self.filter_model.mapToSource(index)
@@ -717,8 +627,7 @@ class FileManagerWidget(QWidget):
 
     def _add_selected_files(self):
         """Agregar archivos seleccionados a la lista"""
-        current_view = self._get_current_view()
-        selection = current_view.selectionModel().selectedIndexes()
+        selection = self.tree_view.selectionModel().selectedIndexes()
 
         added_files = []
         for index in selection:
@@ -749,38 +658,47 @@ class FileManagerWidget(QWidget):
     def _update_selected_buttons_state(self):
         """Actualizar estado de botones de archivos seleccionados"""
         has_files = len(self.selected_model.selected_files) > 0
-        has_selection = len(self.selected_table.selectionModel().selectedRows()) > 0
+        has_selection = len(self.selected_list.selectionModel().selectedRows()) > 0
 
         self.clear_button.setEnabled(has_files)
         self.remove_button.setEnabled(has_selection)
         self.move_up_button.setEnabled(has_selection)
         self.move_down_button.setEnabled(has_selection)
 
+        # Actualizar también el botón de combinar
+        self.combine_button.setEnabled(has_files)
+
     def _move_selected_up(self):
         """Mover archivo seleccionado hacia arriba"""
-        selected_rows = [index.row() for index in self.selected_table.selectionModel().selectedRows()]
+        selected_rows = [index.row() for index in self.selected_list.selectionModel().selectedRows()]
         if selected_rows:
             row = min(selected_rows)
             if row > 0:
                 if self.selected_model.move_file(row, row - 1):
                     # Mantener selección
-                    self.selected_table.selectRow(row - 1)
+                    self.selected_list.selectionModel().setCurrentIndex(
+                        self.selected_model.index(row - 1, 0),
+                        self.selected_list.selectionModel().SelectionFlag.ClearAndSelect
+                    )
                     self._emit_files_changed()
 
     def _move_selected_down(self):
         """Mover archivo seleccionado hacia abajo"""
-        selected_rows = [index.row() for index in self.selected_table.selectionModel().selectedRows()]
+        selected_rows = [index.row() for index in self.selected_list.selectionModel().selectedRows()]
         if selected_rows:
             row = max(selected_rows)
             if row < len(self.selected_model.selected_files) - 1:
                 if self.selected_model.move_file(row, row + 1):
                     # Mantener selección
-                    self.selected_table.selectRow(row + 1)
+                    self.selected_list.selectionModel().setCurrentIndex(
+                        self.selected_model.index(row + 1, 0),
+                        self.selected_list.selectionModel().SelectionFlag.ClearAndSelect
+                    )
                     self._emit_files_changed()
 
     def _remove_selected_files(self):
         """Remover archivos seleccionados"""
-        selected_rows = sorted([index.row() for index in self.selected_table.selectionModel().selectedRows()],
+        selected_rows = sorted([index.row() for index in self.selected_list.selectionModel().selectedRows()],
                               reverse=True)
 
         for row in selected_rows:
@@ -801,7 +719,11 @@ class FileManagerWidget(QWidget):
 
     def _emit_files_changed(self):
         """Emitir señal de cambio en archivos seleccionados"""
-        self.files_selected.emit(self.selected_model.get_selected_files())
+        files = self.selected_model.get_selected_files()
+        self.files_selected.emit(files)
+
+        # Controlar estado del botón de combinar
+        self.combine_button.setEnabled(len(files) > 0)
 
     # Métodos públicos para interacción externa
 
