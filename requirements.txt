@@ -1,5 +1,4 @@
 # PDF Combiner Pro - Required Dependencies
-# Only dependencies actually used by combinar_pdfs.py
 
 # PDF manipulation libraries
 PyPDF2==3.0.1
@@ -11,8 +10,11 @@ inquirer==3.4.0
 # PDF generation library
 reportlab==4.4.3
 
-# Image processing (required by reportlab)
-pillow==11.3.0
+# Image processing (required by reportlab and GUI)
+Pillow==11.3.0
 
-# GUI libraries
+# GUI libraries (Qt6 framework)
 PyQt6==6.9.1
+
+# Additional dependencies for cross-platform compatibility
+blessed==1.20.0
