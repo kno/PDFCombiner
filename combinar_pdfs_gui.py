@@ -14,9 +14,10 @@ BUTTON_STYLES = {
             background-color: #2196F3;
             color: white;
             font-weight: bold;
-            padding: 10px;
+            padding: 12px 16px;
             border: none;
             border-radius: 4px;
+            min-width: 120px;
         }
         QPushButton:hover {
             background-color: #1976D2;
@@ -123,32 +124,32 @@ class PDFCombinerGUI(QMainWindow):
         frame.setFrameStyle(QFrame.Shape.StyledPanel)
         frame.setMinimumWidth(280)
         layout = QVBoxLayout(frame)
-        
+
         # Añadir título
         layout.addWidget(self.create_styled_label(title))
-        
+
         # Añadir lista
         layout.addWidget(list_widget)
-        
+
         # Añadir botones si se proporcionan
         if buttons_layout:
             layout.addLayout(buttons_layout)
-            
+
         return frame
 
     def setup_list_widget(self, is_selected_list=False, multi_selection=False):
         """Configurar widget de lista con opciones consistentes"""
         list_widget = DragDropListWidget(show_tooltips=True)
-        
+
         if is_selected_list:
             list_widget.is_selected_list = True
             list_widget.setDragDropMode(QListWidget.DragDropMode.InternalMove)
         else:
             list_widget.setDragDropMode(QListWidget.DragDropMode.NoDragDrop)
-            
+
         if multi_selection:
             list_widget.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
-            
+
         return list_widget
 
     def populate_list_with_titles(self, list_widget, files, tooltips_dict):
@@ -167,18 +168,18 @@ class PDFCombinerGUI(QMainWindow):
     def move_item_in_list(self, direction):
         """Mover elemento en la lista (direction: 'up' o 'down')"""
         current_row = self.selected_listbox.currentRow()
-        
+
         if direction == 'up' and current_row > 0:
             new_row = current_row - 1
         elif direction == 'down' and current_row >= 0 and current_row < len(self.selected_files) - 1:
             new_row = current_row + 1
         else:
             return  # No se puede mover
-        
+
         # Intercambiar elementos
         self.selected_files[current_row], self.selected_files[new_row] = \
             self.selected_files[new_row], self.selected_files[current_row]
-        
+
         # Actualizar lista y mantener selección
         self.refresh_selected_listbox()
         self.selected_listbox.setCurrentRow(new_row)
@@ -222,7 +223,7 @@ class PDFCombinerGUI(QMainWindow):
     def create_center_frame(self):
         """Crear frame central con controles"""
         center_frame = QFrame()
-        center_frame.setMaximumWidth(120)
+        center_frame.setMaximumWidth(180)
         center_layout = QVBoxLayout(center_frame)
         center_layout.addStretch()
 
@@ -375,7 +376,7 @@ class PDFCombinerGUI(QMainWindow):
         elif key == Qt.Key.Key_Return and self.file_listbox.hasFocus():
             self.add_selected_files()
         # Shift + flechas para reordenar en lista de seleccionados
-        elif (modifiers & Qt.KeyboardModifier.ShiftModifier and 
+        elif (modifiers & Qt.KeyboardModifier.ShiftModifier and
               self.selected_listbox.hasFocus()):
             if key == Qt.Key.Key_Up:
                 self.move_up()
@@ -397,13 +398,13 @@ class PDFCombinerGUI(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    
+
     # Establecer estilo oscuro moderno
     app.setStyleSheet(get_dark_theme_stylesheet())
-    
+
     window = PDFCombinerGUI()
     window.show()
-    
+
     return app.exec()
 
 def get_dark_theme_stylesheet():
