@@ -4,7 +4,7 @@ Configuration settings for PDF Combiner Pro
 
 class AppConfig:
     """Configuración principal de la aplicación"""
-    WINDOW_TITLE = "PDF Combiner Pro - Qt Edition"
+    WINDOW_TITLE = "PDF Combiner Pro"
     WINDOW_SIZE = (900, 500)
     WINDOW_MIN_SIZE = (800, 400)
     SUPPORTED_EXTENSIONS = ['.pdf']
