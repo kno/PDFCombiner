@@ -51,6 +51,10 @@ class ColorPalette:
     DARK_BORDER = "#555555"
     DARK_ACCENT = "#0078d4"
 
+    # Colores para drag and drop
+    DROP_INDICATOR = "#FFD700"  # Dorado para indicador de drop
+    DRAG_ACTIVE = "#E8F5E8"     # Verde claro para item siendo arrastrado
+
 class BaseStyles:
     """Estilos base reutilizables"""
 
@@ -243,12 +247,23 @@ class FileManagerStyles:
         f"QTreeView{BaseStyles.list_item_states()}"
     )
 
-    # Estilo para el ListView de archivos seleccionados usando composición
+    # Estilo para el ListView de archivos seleccionados usando composición con drag and drop
     SELECTED_LIST = (
         f"QListView {{ {BaseStyles.list_view_base()} }}" +
         f"QListView::item {{ {BaseStyles.list_item_base()} }}" +
         f"QListView::item:selected {{ font-weight: bold; }}" +
-        f"QListView{BaseStyles.list_item_states()}"
+        f"QListView{BaseStyles.list_item_states()}" +
+        f"""
+        QListView::drop-indicator {{
+            background-color: {ColorPalette.DROP_INDICATOR};
+            height: 3px;
+            border-radius: 1px;
+        }}
+        QListView::item:hover {{
+            background-color: palette(light);
+            border-left: 3px solid {ColorPalette.PRIMARY_BLUE};
+        }}
+        """
     )
 
     # Estilo base para botones de control usando composición
