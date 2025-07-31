@@ -137,12 +137,12 @@ class FileManagerWidget(QWidget):
         """Configurar interfaz de usuario"""
         layout = QVBoxLayout(self)
 
-        # Header con información del directorio actual
+        # Header con información del directorio actual (altura fija)
         self._create_header_section(layout)
 
-        # Splitter principal con ambas listas
+        # Splitter principal con ambas listas (expandible)
         splitter = QSplitter(Qt.Orientation.Horizontal)
-        layout.addWidget(splitter)
+        layout.addWidget(splitter, 1)  # stretch factor = 1, se expande
 
         # Panel izquierdo: navegación por directorios
         left_panel = self._create_directory_panel()
@@ -157,7 +157,7 @@ class FileManagerWidget(QWidget):
         splitter.setStretchFactor(1, 1)
         splitter.setSizes([400, 400])
 
-        # Sección de controles debajo de ambas listas
+        # Sección de controles debajo de ambas listas (altura fija)
         self._create_controls_section(layout)
 
     def _create_header_section(self, layout: QVBoxLayout):
@@ -185,6 +185,10 @@ class FileManagerWidget(QWidget):
             }
         """)
         header_layout.addWidget(self.current_dir_label)
+
+        # Configurar altura fija para el header
+        header_frame.setMaximumHeight(90)
+        header_frame.setMinimumHeight(90)
 
         layout.addWidget(header_frame)
 
@@ -258,6 +262,10 @@ class FileManagerWidget(QWidget):
 
         # Espaciado
         controls_layout.addStretch()
+
+        # Configurar altura fija para los controles
+        controls_frame.setMaximumHeight(70)
+        controls_frame.setMinimumHeight(70)
 
         layout.addWidget(controls_frame)
 
@@ -579,7 +587,7 @@ class FileManagerWidget(QWidget):
         """Manejar doble click en archivo o directorio"""
         # Mapear al modelo fuente
         source_index = self.filter_model.mapToSource(index)
-        
+
         # Verificar que el índice fuente sea válido
         if not source_index.isValid():
             return
