@@ -65,7 +65,9 @@ jobs:
       run: |
         ls -la dist/
         if [ -d "dist/PDFCombinerPro.app" ]; then
-          zip -r PDFCombinerPro-macOS.zip dist/PDFCombinerPro.app
+          cd dist
+          zip -r ../PDFCombinerPro-macOS.zip PDFCombinerPro.app
+          cd ..
           echo "macOS app bundle created successfully"
         else
           echo "Error: PDFCombinerPro.app not found"
