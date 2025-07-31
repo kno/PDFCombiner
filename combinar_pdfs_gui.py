@@ -3,25 +3,9 @@ import sys
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,
                             QListWidget, QPushButton, QLabel, QCheckBox, QMessageBox,
                             QFileDialog, QWidget, QListWidgetItem, QFrame)
-from PyQt6.QtCore import Qt, QMimeData, pyqtSignal, QRect
-from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QDragMoveEvent, QColor, QBrush, QPainter
+from PyQt6.QtCore import Qt, QMimeData, pyqtSignal
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QDragMoveEvent, QColor, QPainter
 from pdf_utils import AdvancedPDFCombiner, TextProcessor
-
-class MarkedListWidgetItem(QListWidgetItem):
-    """Item personalizado que puede ser marcado visualmente"""
-    def __init__(self, text, parent=None):
-        super().__init__(text, parent)
-        self.is_marked = False
-
-    def set_marked(self, marked):
-        """Marcar o desmarcar el item"""
-        self.is_marked = marked
-        if marked:
-            self.setBackground(QBrush(QColor(76, 175, 80)))  # Verde
-            self.setForeground(QBrush(QColor(0, 0, 0)))      # Texto negro
-        else:
-            self.setBackground(QBrush(QColor(0, 0, 0, 0)))   # Transparente
-            self.setForeground(QBrush(QColor(255, 255, 255))) # Texto blanco
 
 # Constantes de estilo
 BUTTON_STYLES = {
@@ -226,11 +210,7 @@ class PDFCombinerGUI(QMainWindow):
 
         for i, filename in enumerate(files):
             title = TextProcessor.extract_title(filename)
-            # Usar la clase personalizada solo para la lista de archivos (navegador)
-            if hasattr(list_widget, 'is_selected_list') and not list_widget.is_selected_list:
-                item = MarkedListWidgetItem(title)
-            else:
-                item = QListWidgetItem(title)
+            item = QListWidgetItem(title)
             list_widget.addItem(item)
             tooltips_dict[i] = filename
 
@@ -511,31 +491,12 @@ def get_dark_theme_stylesheet():
         QListWidget::item {
             padding: 8px;
             border-bottom: 1px solid #555555;
-            background-color: transparent;
         }
         QListWidget::item:selected {
-            background-color: #0078d4 !important;
+            background-color: #0078d4;
         }
         QListWidget::item:hover {
             background-color: #505050;
-        }
-        QListWidget#file_listbox::item {
-            background-color: transparent;
-        }
-        QListWidget#file_listbox::item:selected {
-            background-color: #0078d4 !important;
-        }
-        QListWidget#file_listbox::item[marked="true"] {
-            background-color: #4CAF50 !important;
-            color: #000000 !important;
-        }
-        QListWidget#file_listbox::item[marked="true"]:hover {
-            background-color: #45a049 !important;
-            color: #000000 !important;
-        }
-        QListWidget#file_listbox::item[marked="true"]:selected {
-            background-color: #2E7D32 !important;
-            color: #ffffff !important;
         }
         QLabel {
             color: #ffffff;
