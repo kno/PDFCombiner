@@ -206,26 +206,35 @@ class FileManagerWidget(QWidget):
         self.create_index_checkbox.setChecked(True)
         self.create_index_checkbox.setStyleSheet("""
             QCheckBox {
-                color: palette(text);
+                color: #FFFFFF;
                 font-weight: bold;
-                padding: 8px;
+                padding: 8px 12px;
+                spacing: 8px;
+                font-size: 13px;
+                background-color: transparent;
+            }
+            QCheckBox:hover {
+                color: #E3F2FD;
             }
             QCheckBox::indicator {
-                width: 18px;
-                height: 18px;
+                width: 20px;
+                height: 20px;
+                margin-right: 8px;
             }
             QCheckBox::indicator:unchecked {
                 border: 2px solid palette(mid);
                 background-color: palette(base);
-                border-radius: 3px;
+                border-radius: 4px;
             }
             QCheckBox::indicator:checked {
                 border: 2px solid #2196F3;
                 background-color: #2196F3;
-                border-radius: 3px;
-                image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIHZpZXdCb3g9IjAgMCAxMCAxMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEuNSA1TDQgNy41TDguNSAyLjUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+);
+                border-radius: 4px;
+                image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIgNkw0LjUgOC41TDEwIDMiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPg==);
             }
         """)
+        # Asegurar que el checkbox tenga suficiente espacio
+        self.create_index_checkbox.setMinimumWidth(200)
         controls_layout.addWidget(self.create_index_checkbox)
 
         # Espaciado
