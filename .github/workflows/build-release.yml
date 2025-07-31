@@ -74,15 +74,17 @@ jobs:
 
     - name: Prepare Windows artifacts
       if: matrix.os == 'windows-latest'
+      shell: pwsh
       run: |
-        dir dist\
-        if exist "dist\PDFCombinerPro.exe" (
-          copy "dist\PDFCombinerPro.exe" "PDFCombinerPro-Windows.exe"
-          echo "Windows executable prepared successfully"
-        ) else (
-          echo "Error: PDFCombinerPro.exe not found"
+        Write-Host "Listing dist directory:"
+        Get-ChildItem -Path dist
+        if (Test-Path 'dist\PDFCombinerPro.exe') {
+          Copy-Item 'dist\PDFCombinerPro.exe' 'PDFCombinerPro-Windows.exe'
+          Write-Host 'Windows executable prepared successfully'
+        } else {
+          Write-Error 'Error: PDFCombinerPro.exe not found'
           exit 1
-        )
+        }
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
