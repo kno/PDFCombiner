@@ -519,6 +519,13 @@ def get_dark_theme_stylesheet():
     """
 
 if __name__ == "__main__":
+    import sys
+    import os
+
+    print("⚠️  Usando versión original de combinar_pdfs_gui.py")
+    print("💡 Para usar la versión refactorizada, ejecuta: python main.py")
+    print()
+
     if len(sys.argv) == 1:
         sys.exit(main())
     else:
