@@ -3,7 +3,12 @@
 # Workflow Monitor
 # Monitorea automáticamente el progreso del workflow hasta que termine
 
-WORKFLOW_ID="16657340404"
+## Obtener dinámicamente el último ID de workflow para build-release.yml
+WORKFLOW_ID=$(gh run list --workflow=build-release.yml --limit=1 --json databaseId --jq '.[0].databaseId')
+if [ -z "$WORKFLOW_ID" ] || [ "$WORKFLOW_ID" = "null" ]; then
+    echo "❌ No se pudo obtener el ID del workflow más reciente"
+    exit 1
+fi
 CHECK_INTERVAL=30  # segundos entre verificaciones
 
 echo "👀 Monitoreando workflow ID: $WORKFLOW_ID"
