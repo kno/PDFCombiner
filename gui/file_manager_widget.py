@@ -15,6 +15,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap, QPainter, QFileSystemModel
 from core.file_manager import FileManager, FileManagerError
 from utils.text_processor import TextProcessor
+from gui.styles import FileManagerStyles
 
 class PDFFilterModel(QSortFilterProxyModel):
     """Modelo proxy para filtrar solo archivos PDF y directorios, con navegación hacia arriba integrada"""
@@ -168,22 +169,13 @@ class FileManagerWidget(QWidget):
 
         # Título
         title_label = QLabel("Gestor de Archivos PDF")
-        title_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #2196F3; padding: 5px;")
+        title_label.setStyleSheet(FileManagerStyles.SECTION_TITLE_LARGE)
         header_layout.addWidget(title_label)
 
         # Solo directorio actual - sin botones de navegación
         # Etiqueta del directorio actual
         self.current_dir_label = QLabel()
-        self.current_dir_label.setStyleSheet("""
-            QLabel {
-                color: palette(text);
-                background-color: palette(base);
-                padding: 6px;
-                border: 1px solid palette(mid);
-                border-radius: 4px;
-                font-weight: bold;
-            }
-        """)
+        self.current_dir_label.setStyleSheet(FileManagerStyles.CURRENT_DIR_LABEL)
         header_layout.addWidget(self.current_dir_label)
 
         # Configurar altura fija para el header
@@ -204,35 +196,7 @@ class FileManagerWidget(QWidget):
         # Checkbox para crear índice interactivo
         self.create_index_checkbox = QCheckBox("Crear índice interactivo")
         self.create_index_checkbox.setChecked(True)
-        self.create_index_checkbox.setStyleSheet("""
-            QCheckBox {
-                color: #FFFFFF;
-                font-weight: bold;
-                padding: 8px 12px;
-                spacing: 8px;
-                font-size: 13px;
-                background-color: transparent;
-            }
-            QCheckBox:hover {
-                color: #E3F2FD;
-            }
-            QCheckBox::indicator {
-                width: 20px;
-                height: 20px;
-                margin-right: 8px;
-            }
-            QCheckBox::indicator:unchecked {
-                border: 2px solid palette(mid);
-                background-color: palette(base);
-                border-radius: 4px;
-            }
-            QCheckBox::indicator:checked {
-                border: 2px solid #2196F3;
-                background-color: #2196F3;
-                border-radius: 4px;
-                image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIgNkw0LjUgOC41TDEwIDMiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPg==);
-            }
-        """)
+        self.create_index_checkbox.setStyleSheet(FileManagerStyles.CREATE_INDEX_CHECKBOX)
         # Asegurar que el checkbox tenga suficiente espacio
         self.create_index_checkbox.setMinimumWidth(200)
         controls_layout.addWidget(self.create_index_checkbox)
@@ -244,29 +208,7 @@ class FileManagerWidget(QWidget):
         self.combine_button = QPushButton("🔗 Combinar PDFs")
         self.combine_button.setMinimumHeight(40)
         self.combine_button.setEnabled(False)  # Inicialmente deshabilitado
-        self.combine_button.setStyleSheet("""
-            QPushButton {
-                background-color: #2196F3;
-                color: white;
-                border: 2px solid #1976D2;
-                border-radius: 8px;
-                padding: 8px 20px;
-                font-weight: bold;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #1976D2;
-                border-color: #1565C0;
-            }
-            QPushButton:pressed {
-                background-color: #1565C0;
-            }
-            QPushButton:disabled {
-                background-color: palette(window);
-                color: palette(disabled-text);
-                border-color: palette(midlight);
-            }
-        """)
+        self.combine_button.setStyleSheet(FileManagerStyles.COMBINE_BUTTON)
         controls_layout.addWidget(self.combine_button)
 
         # Espaciado
@@ -286,29 +228,12 @@ class FileManagerWidget(QWidget):
 
         # Título del panel
         title_label = QLabel("Explorador de Archivos")
-        title_label.setStyleSheet("font-weight: bold; color: #2196F3; padding: 5px;")
+        title_label.setStyleSheet(FileManagerStyles.SECTION_TITLE)
         layout.addWidget(title_label)
 
         # Botón de subir directorio (aparece cuando es necesario)
         self.parent_dir_button = QPushButton("📁 ⬆️ Directorio superior")
-        self.parent_dir_button.setStyleSheet("""
-            QPushButton {
-                background-color: palette(base);
-                color: palette(text);
-                border: 1px solid palette(mid);
-                border-radius: 4px;
-                padding: 8px;
-                text-align: left;
-                font-weight: normal;
-            }
-            QPushButton:hover {
-                background-color: palette(light);
-                border-color: palette(highlight);
-            }
-            QPushButton:pressed {
-                background-color: palette(midlight);
-            }
-        """)
+        self.parent_dir_button.setStyleSheet(FileManagerStyles.PARENT_DIR_BUTTON)
         self.parent_dir_button.setVisible(False)  # Inicialmente oculto
         layout.addWidget(self.parent_dir_button)
 
@@ -320,29 +245,7 @@ class FileManagerWidget(QWidget):
         # Botón de agregar
         buttons_layout = QHBoxLayout()
         self.add_button = QPushButton("→ Agregar")
-        self.add_button.setStyleSheet("""
-            QPushButton {
-                background-color: #4CAF50;
-                color: white;
-                border: 2px solid #388E3C;
-                border-radius: 6px;
-                padding: 8px 16px;
-                font-weight: bold;
-                font-size: 12px;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-                border-color: #2E7D32;
-            }
-            QPushButton:pressed {
-                background-color: #388E3C;
-            }
-            QPushButton:disabled {
-                background-color: palette(window);
-                color: palette(disabled-text);
-                border-color: palette(midlight);
-            }
-        """)
+        self.add_button.setStyleSheet(FileManagerStyles.ADD_BUTTON)
         self.add_button.setEnabled(False)
         buttons_layout.addStretch()
         buttons_layout.addWidget(self.add_button)
@@ -358,7 +261,7 @@ class FileManagerWidget(QWidget):
 
         # Título del panel
         title_label = QLabel("Archivos Seleccionados")
-        title_label.setStyleSheet("font-weight: bold; color: #2196F3; padding: 5px;")
+        title_label.setStyleSheet(FileManagerStyles.SECTION_TITLE)
         layout.addWidget(title_label)
 
         # Lista de archivos seleccionados
@@ -366,28 +269,7 @@ class FileManagerWidget(QWidget):
         self.selected_list.setAlternatingRowColors(True)
 
         # Estilos para la lista de seleccionados
-        self.selected_list.setStyleSheet("""
-            QListView {
-                background-color: palette(base);
-                color: palette(text);
-                border: 1px solid palette(mid);
-                selection-background-color: palette(highlight);
-                selection-color: palette(highlighted-text);
-                alternate-background-color: palette(alternate-base);
-            }
-            QListView::item {
-                padding: 8px;
-                border-bottom: 1px solid palette(midlight);
-            }
-            QListView::item:selected {
-                background-color: palette(highlight);
-                color: palette(highlighted-text);
-                font-weight: bold;
-            }
-            QListView::item:hover {
-                background-color: palette(light);
-            }
-        """)
+        self.selected_list.setStyleSheet(FileManagerStyles.SELECTED_LIST)
         layout.addWidget(self.selected_list)
 
         # Botones de control
@@ -399,61 +281,13 @@ class FileManagerWidget(QWidget):
         self.clear_button = QPushButton("🗑 Limpiar Todo")
 
         # Estilos para botones
-        button_style = """
-            QPushButton {
-                background-color: palette(button);
-                color: palette(button-text);
-                border: 2px solid palette(mid);
-                border-radius: 6px;
-                padding: 6px 12px;
-                margin: 2px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: palette(light);
-                border-color: palette(highlight);
-            }
-            QPushButton:pressed {
-                background-color: palette(midlight);
-            }
-            QPushButton:disabled {
-                background-color: palette(window);
-                color: palette(disabled-text);
-                border-color: palette(midlight);
-            }
-        """
-
         for button in [self.move_up_button, self.move_down_button, self.remove_button, self.clear_button]:
-            button.setStyleSheet(button_style)
+            button.setStyleSheet(FileManagerStyles.CONTROL_BUTTON_BASE)
             button.setEnabled(False)
 
-        self.remove_button.setStyleSheet(button_style + """
-            QPushButton {
-                color: #d32f2f;
-                border-color: #d32f2f;
-            }
-            QPushButton:hover {
-                background-color: #ffebee;
-                border-color: #b71c1c;
-            }
-            QPushButton:pressed {
-                background-color: #ffcdd2;
-            }
-        """)
+        self.remove_button.setStyleSheet(FileManagerStyles.DANGER_BUTTON)
 
-        self.clear_button.setStyleSheet(button_style + """
-            QPushButton {
-                color: #d32f2f;
-                border-color: #d32f2f;
-            }
-            QPushButton:hover {
-                background-color: #ffebee;
-                border-color: #b71c1c;
-            }
-            QPushButton:pressed {
-                background-color: #ffcdd2;
-            }
-        """)
+        self.clear_button.setStyleSheet(FileManagerStyles.DANGER_BUTTON)
 
         buttons_layout.addWidget(self.move_up_button)
         buttons_layout.addWidget(self.move_down_button)
@@ -476,27 +310,7 @@ class FileManagerWidget(QWidget):
         self.tree_view.setHeaderHidden(True)
 
         # Estilos adaptativos para tema oscuro
-        self.tree_view.setStyleSheet("""
-            QTreeView {
-                background-color: palette(base);
-                color: palette(text);
-                border: 1px solid palette(mid);
-                selection-background-color: palette(highlight);
-                selection-color: palette(highlighted-text);
-                alternate-background-color: palette(alternate-base);
-            }
-            QTreeView::item {
-                padding: 4px;
-                border-bottom: 1px solid palette(midlight);
-            }
-            QTreeView::item:selected {
-                background-color: palette(highlight);
-                color: palette(highlighted-text);
-            }
-            QTreeView::item:hover {
-                background-color: palette(light);
-            }
-        """)
+        self.tree_view.setStyleSheet(FileManagerStyles.TREE_VIEW)
 
     def _setup_models(self):
         """Configurar modelos de datos"""
