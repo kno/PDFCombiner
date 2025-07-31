@@ -17,11 +17,16 @@ from core.file_manager import FileManager, FileManagerError
 from utils.text_processor import TextProcessor
 
 class PDFFilterModel(QSortFilterProxyModel):
-    """Modelo proxy para filtrar solo archivos PDF y directorios"""
+    """Modelo proxy para filtrar solo archivos PDF y directorios, con navegación hacia arriba integrada"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setRecursiveFilteringEnabled(True)
+        self.file_manager = None
+
+    def set_file_manager(self, file_manager):
+        """Configurar referencia al file manager para navegación"""
+        self.file_manager = file_manager
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
         """Filtrar solo directorios y archivos PDF"""
@@ -166,9 +171,7 @@ class FileManagerWidget(QWidget):
         title_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #2196F3; padding: 5px;")
         header_layout.addWidget(title_label)
 
-        # Directorio actual y controles
-        dir_layout = QHBoxLayout()
-
+        # Solo directorio actual - sin botones de navegación
         # Etiqueta del directorio actual
         self.current_dir_label = QLabel()
         self.current_dir_label.setStyleSheet("""
@@ -181,58 +184,8 @@ class FileManagerWidget(QWidget):
                 font-weight: bold;
             }
         """)
-        dir_layout.addWidget(self.current_dir_label)
+        header_layout.addWidget(self.current_dir_label)
 
-        # Botón para navegar hacia arriba
-        self.up_button = QPushButton("↑ Subir")
-        self.up_button.setMaximumWidth(80)
-        self.up_button.setStyleSheet("""
-            QPushButton {
-                background-color: palette(button);
-                color: palette(button-text);
-                border: 2px solid palette(mid);
-                border-radius: 6px;
-                padding: 6px 12px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: palette(light);
-                border-color: palette(highlight);
-            }
-            QPushButton:pressed {
-                background-color: palette(midlight);
-            }
-            QPushButton:disabled {
-                background-color: palette(window);
-                color: palette(disabled-text);
-                border-color: palette(midlight);
-            }
-        """)
-        dir_layout.addWidget(self.up_button)
-
-        # Botón para seleccionar directorio
-        self.browse_button = QPushButton("📁 Explorar")
-        self.browse_button.setMaximumWidth(100)
-        self.browse_button.setStyleSheet("""
-            QPushButton {
-                background-color: #2196F3;
-                color: white;
-                border: 2px solid #1976D2;
-                border-radius: 6px;
-                padding: 6px 12px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #1976D2;
-                border-color: #1565C0;
-            }
-            QPushButton:pressed {
-                background-color: #1565C0;
-            }
-        """)
-        dir_layout.addWidget(self.browse_button)
-
-        header_layout.addLayout(dir_layout)
         layout.addWidget(header_frame)
 
     def _create_controls_section(self, layout: QVBoxLayout):
@@ -318,6 +271,29 @@ class FileManagerWidget(QWidget):
         title_label = QLabel("Explorador de Archivos")
         title_label.setStyleSheet("font-weight: bold; color: #2196F3; padding: 5px;")
         layout.addWidget(title_label)
+
+        # Botón de subir directorio (aparece cuando es necesario)
+        self.parent_dir_button = QPushButton("📁 ⬆️ Directorio superior")
+        self.parent_dir_button.setStyleSheet("""
+            QPushButton {
+                background-color: palette(base);
+                color: palette(text);
+                border: 1px solid palette(mid);
+                border-radius: 4px;
+                padding: 8px;
+                text-align: left;
+                font-weight: normal;
+            }
+            QPushButton:hover {
+                background-color: palette(light);
+                border-color: palette(highlight);
+            }
+            QPushButton:pressed {
+                background-color: palette(midlight);
+            }
+        """)
+        self.parent_dir_button.setVisible(False)  # Inicialmente oculto
+        layout.addWidget(self.parent_dir_button)
 
         # Vista de árbol únicamente
         self.tree_view = QTreeView()
@@ -479,6 +455,9 @@ class FileManagerWidget(QWidget):
         self.tree_view.setSortingEnabled(True)
         self.tree_view.setSelectionMode(QTreeView.SelectionMode.ExtendedSelection)
 
+        # Ocultar la cabecera "Name"
+        self.tree_view.setHeaderHidden(True)
+
         # Estilos adaptativos para tema oscuro
         self.tree_view.setStyleSheet("""
             QTreeView {
@@ -513,6 +492,8 @@ class FileManagerWidget(QWidget):
         # Modelo proxy para filtrar
         self.filter_model = PDFFilterModel()
         self.filter_model.setSourceModel(self.fs_model)
+        # Configurar referencia al file manager para navegación
+        self.filter_model.set_file_manager(self.file_manager)
 
         # Configurar vista de árbol con el modelo filtrado
         self.tree_view.setModel(self.filter_model)
@@ -527,14 +508,14 @@ class FileManagerWidget(QWidget):
 
     def _setup_connections(self):
         """Configurar conexiones de señales"""
-        # Navegación
-        self.up_button.clicked.connect(self._go_up_directory)
-        self.browse_button.clicked.connect(self._browse_directory)
+        # Navegación con botón de directorio superior
+        self.parent_dir_button.clicked.connect(self._navigate_to_parent)
 
         # Selección en vista de archivos
         self.tree_view.selectionModel().selectionChanged.connect(self._on_file_selection_changed)
 
         # Doble click para navegar/agregar
+        self.tree_view.doubleClicked.connect(self._on_file_double_clicked)
         self.tree_view.doubleClicked.connect(self._on_file_double_clicked)
 
         # Botones de archivo
@@ -570,8 +551,9 @@ class FileManagerWidget(QWidget):
         proxy_root = self.filter_model.mapFromSource(root_index)
         self.tree_view.setRootIndex(proxy_root)
 
-        # Habilitar/deshabilitar botón de subir
-        self.up_button.setEnabled(self.file_manager.can_go_up())
+        # Mostrar/ocultar botón de directorio superior
+        can_go_up = self.file_manager.can_go_up()
+        self.parent_dir_button.setVisible(can_go_up)
 
         # Emitir señal
         self.current_directory_changed.emit(str(current_path))
@@ -593,26 +575,14 @@ class FileManagerWidget(QWidget):
 
         self.add_button.setEnabled(has_pdf_files)
 
-    def _go_up_directory(self):
-        """Navegar al directorio padre"""
-        if self.file_manager.go_up():
-            self._update_current_directory()
-
-    def _browse_directory(self):
-        """Abrir diálogo para seleccionar directorio"""
-        directory = QFileDialog.getExistingDirectory(
-            self,
-            "Seleccionar Directorio",
-            self.file_manager.current_directory
-        )
-
-        if directory:
-            if self.file_manager.set_current_directory(directory):
-                self._update_current_directory()
-
     def _on_file_double_clicked(self, index: QModelIndex):
         """Manejar doble click en archivo o directorio"""
+        # Mapear al modelo fuente
         source_index = self.filter_model.mapToSource(index)
+        
+        # Verificar que el índice fuente sea válido
+        if not source_index.isValid():
+            return
 
         if self.fs_model.isDir(source_index):
             # Navegar al directorio
@@ -624,6 +594,11 @@ class FileManagerWidget(QWidget):
             file_path = self.fs_model.filePath(source_index)
             if file_path.lower().endswith('.pdf'):
                 self._add_file_to_selection(file_path)
+
+    def _navigate_to_parent(self):
+        """Navegar al directorio padre"""
+        if self.file_manager.go_up():
+            self._update_current_directory()
 
     def _add_selected_files(self):
         """Agregar archivos seleccionados a la lista"""
