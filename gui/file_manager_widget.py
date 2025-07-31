@@ -1,0 +1,825 @@
+"""
+Widget de gestión de archivos refactorizado usando QTreeView, QTableView y QFileSystemModel
+"""
+from typing import List, Dict, Optional, Set
+from pathlib import Path
+from PyQt6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
+    QTreeView, QTableView, QLabel, QComboBox, QPushButton,
+    QFrame, QHeaderView, QMessageBox, QFileDialog
+)
+from PyQt6.QtCore import (
+    Qt, QModelIndex, pyqtSignal,
+    QDir, QSortFilterProxyModel, QTimer
+)
+from PyQt6.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap, QPainter, QFileSystemModel
+from core.file_manager import FileManager, FileManagerError
+from utils.text_processor import TextProcessor
+
+class PDFFilterModel(QSortFilterProxyModel):
+    """Modelo proxy para filtrar solo archivos PDF y directorios"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setRecursiveFilteringEnabled(True)
+
+    def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
+        """Filtrar solo directorios y archivos PDF"""
+        source_model = self.sourceModel()
+        index = source_model.index(source_row, 0, source_parent)
+
+        if source_model.isDir(index):
+            return True
+
+        filename = source_model.fileName(index)
+        return filename.lower().endswith('.pdf')
+
+class SelectedFilesModel(QStandardItemModel):
+    """Modelo para archivos seleccionados con información detallada"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setHorizontalHeaderLabels(['Título', 'Archivo', 'Tamaño', 'Ruta'])
+        self.selected_files: List[str] = []
+
+    def add_file(self, file_path: str) -> bool:
+        """Agregar archivo a la selección"""
+        if file_path in self.selected_files:
+            return False
+
+        self.selected_files.append(file_path)
+
+        # Crear elementos para la fila
+        path_obj = Path(file_path)
+        title = TextProcessor.extract_title(path_obj.name)
+        filename = path_obj.name
+
+        # Obtener tamaño del archivo
+        try:
+            size = path_obj.stat().st_size
+            size_str = self._format_file_size(size)
+        except OSError:
+            size_str = "N/A"
+
+        # Crear items
+        title_item = QStandardItem(title)
+        title_item.setData(file_path, Qt.ItemDataRole.UserRole)
+        title_item.setIcon(self._get_pdf_icon())
+
+        filename_item = QStandardItem(filename)
+        size_item = QStandardItem(size_str)
+        path_item = QStandardItem(str(path_obj.parent))
+
+        # Agregar fila
+        self.appendRow([title_item, filename_item, size_item, path_item])
+        return True
+
+    def remove_file(self, row: int) -> bool:
+        """Remover archivo por índice de fila"""
+        if 0 <= row < len(self.selected_files):
+            self.selected_files.pop(row)
+            self.removeRow(row)
+            return True
+        return False
+
+    def move_file(self, from_row: int, to_row: int) -> bool:
+        """Mover archivo de una posición a otra"""
+        if (0 <= from_row < len(self.selected_files) and
+            0 <= to_row < len(self.selected_files) and
+            from_row != to_row):
+
+            # Mover en la lista
+            file_path = self.selected_files.pop(from_row)
+            self.selected_files.insert(to_row, file_path)
+
+            # Mover en el modelo
+            items = self.takeRow(from_row)
+            self.insertRow(to_row, items)
+            return True
+        return False
+
+    def clear_files(self):
+        """Limpiar todos los archivos seleccionados"""
+        self.selected_files.clear()
+        self.clear()
+        self.setHorizontalHeaderLabels(['Título', 'Archivo', 'Tamaño', 'Ruta'])
+
+    def get_selected_files(self) -> List[str]:
+        """Obtener lista de archivos seleccionados"""
+        return self.selected_files.copy()
+
+    def _format_file_size(self, size_bytes: int) -> str:
+        """Formatear tamaño de archivo"""
+        if size_bytes < 1024:
+            return f"{size_bytes} B"
+        elif size_bytes < 1024 * 1024:
+            return f"{size_bytes / 1024:.1f} KB"
+        else:
+            return f"{size_bytes / (1024 * 1024):.1f} MB"
+
+    def _get_pdf_icon(self) -> QIcon:
+        """Crear icono para archivos PDF"""
+        pixmap = QPixmap(16, 16)
+        pixmap.fill(Qt.GlobalColor.transparent)
+
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setBrush(Qt.GlobalColor.red)
+        painter.setPen(Qt.GlobalColor.darkRed)
+        painter.drawRoundedRect(2, 2, 12, 12, 2, 2)
+        painter.setPen(Qt.GlobalColor.white)
+        painter.drawText(4, 12, "PDF")
+        painter.end()
+
+        return QIcon(pixmap)
+
+class FileManagerWidget(QWidget):
+    """Widget completo de gestión de archivos con vistas múltiples"""
+
+    # Señales
+    files_selected = pyqtSignal(list)  # Emitida cuando cambian los archivos seleccionados
+    current_directory_changed = pyqtSignal(str)  # Emitida cuando cambia el directorio
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.file_manager = FileManager()
+        self.selected_files_set: Set[str] = set()
+
+        self._setup_ui()
+        self._setup_models()
+        self._setup_connections()
+        self._update_current_directory()
+
+    def _setup_ui(self):
+        """Configurar interfaz de usuario"""
+        layout = QVBoxLayout(self)
+
+        # Header con información del directorio actual
+        self._create_header_section(layout)
+
+        # Splitter principal
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        layout.addWidget(splitter)
+
+        # Panel izquierdo: navegación por directorios
+        left_panel = self._create_directory_panel()
+        splitter.addWidget(left_panel)
+
+        # Panel derecho: archivos seleccionados
+        right_panel = self._create_selected_files_panel()
+        splitter.addWidget(right_panel)
+
+        # Configurar proporciones del splitter
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 1)
+        splitter.setSizes([400, 400])
+
+    def _create_header_section(self, layout: QVBoxLayout):
+        """Crear sección de header con información del directorio"""
+        header_frame = QFrame()
+        header_frame.setFrameStyle(QFrame.Shape.StyledPanel)
+        header_layout = QVBoxLayout(header_frame)
+
+        # Título
+        title_label = QLabel("Gestor de Archivos PDF")
+        title_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #2196F3; padding: 5px;")
+        header_layout.addWidget(title_label)
+
+        # Directorio actual y controles
+        dir_layout = QHBoxLayout()
+
+        # Etiqueta del directorio actual
+        self.current_dir_label = QLabel()
+        self.current_dir_label.setStyleSheet("""
+            QLabel {
+                color: palette(text);
+                background-color: palette(base);
+                padding: 6px;
+                border: 1px solid palette(mid);
+                border-radius: 4px;
+                font-weight: bold;
+            }
+        """)
+        dir_layout.addWidget(self.current_dir_label)
+
+        # Botón para navegar hacia arriba
+        self.up_button = QPushButton("↑ Subir")
+        self.up_button.setMaximumWidth(80)
+        self.up_button.setStyleSheet("""
+            QPushButton {
+                background-color: palette(button);
+                color: palette(button-text);
+                border: 2px solid palette(mid);
+                border-radius: 6px;
+                padding: 6px 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: palette(light);
+                border-color: palette(highlight);
+            }
+            QPushButton:pressed {
+                background-color: palette(midlight);
+            }
+            QPushButton:disabled {
+                background-color: palette(window);
+                color: palette(disabled-text);
+                border-color: palette(midlight);
+            }
+        """)
+        dir_layout.addWidget(self.up_button)
+
+        # Botón para seleccionar directorio
+        self.browse_button = QPushButton("📁 Explorar")
+        self.browse_button.setMaximumWidth(100)
+        self.browse_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2196F3;
+                color: white;
+                border: 2px solid #1976D2;
+                border-radius: 6px;
+                padding: 6px 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+                border-color: #1565C0;
+            }
+            QPushButton:pressed {
+                background-color: #1565C0;
+            }
+        """)
+        dir_layout.addWidget(self.browse_button)
+
+        header_layout.addLayout(dir_layout)
+        layout.addWidget(header_frame)
+
+    def _create_directory_panel(self) -> QWidget:
+        """Crear panel de navegación por directorios"""
+        panel = QFrame()
+        panel.setFrameStyle(QFrame.Shape.StyledPanel)
+        layout = QVBoxLayout(panel)
+
+        # Título del panel
+        title_label = QLabel("Explorador de Archivos")
+        title_label.setStyleSheet("font-weight: bold; color: #2196F3; padding: 5px;")
+        layout.addWidget(title_label)
+
+        # Combo box para vista
+        view_layout = QHBoxLayout()
+        view_label = QLabel("Vista:")
+        view_label.setStyleSheet("""
+            QLabel {
+                color: palette(text);
+                font-weight: bold;
+                padding: 4px;
+            }
+        """)
+
+        self.view_combo = QComboBox()
+        self.view_combo.addItems(["Árbol", "Tabla"])
+        self.view_combo.setStyleSheet("""
+            QComboBox {
+                background-color: palette(button);
+                color: palette(button-text);
+                border: 2px solid palette(mid);
+                border-radius: 6px;
+                padding: 4px 8px;
+                font-weight: bold;
+                min-width: 80px;
+            }
+            QComboBox:hover {
+                border-color: palette(highlight);
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+            QComboBox::down-arrow {
+                width: 12px;
+                height: 12px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: palette(base);
+                color: palette(text);
+                border: 1px solid palette(mid);
+                selection-background-color: palette(highlight);
+                selection-color: palette(highlighted-text);
+            }
+        """)
+
+        view_layout.addWidget(view_label)
+        view_layout.addWidget(self.view_combo)
+        view_layout.addStretch()
+        layout.addLayout(view_layout)
+
+        # Stack de vistas
+        self.tree_view = QTreeView()
+        self.table_view = QTableView()
+
+        # Configurar vistas
+        self._setup_tree_view()
+        self._setup_table_view()
+
+        # Agregar vistas (inicialmente mostrar árbol)
+        layout.addWidget(self.tree_view)
+        layout.addWidget(self.table_view)
+        self.table_view.hide()
+
+        # Botones de acción
+        buttons_layout = QHBoxLayout()
+        self.add_button = QPushButton("→ Agregar")
+        self.add_button.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: 2px solid #388E3C;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-weight: bold;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+                border-color: #2E7D32;
+            }
+            QPushButton:pressed {
+                background-color: #388E3C;
+            }
+            QPushButton:disabled {
+                background-color: palette(window);
+                color: palette(disabled-text);
+                border-color: palette(midlight);
+            }
+        """)
+        self.add_button.setEnabled(False)
+        buttons_layout.addStretch()
+        buttons_layout.addWidget(self.add_button)
+        layout.addLayout(buttons_layout)
+
+        return panel
+
+    def _create_selected_files_panel(self) -> QWidget:
+        """Crear panel de archivos seleccionados"""
+        panel = QFrame()
+        panel.setFrameStyle(QFrame.Shape.StyledPanel)
+        layout = QVBoxLayout(panel)
+
+        # Título del panel
+        title_label = QLabel("Archivos Seleccionados")
+        title_label.setStyleSheet("font-weight: bold; color: #2196F3; padding: 5px;")
+        layout.addWidget(title_label)
+
+        # Tabla de archivos seleccionados
+        self.selected_table = QTableView()
+        self.selected_table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+        self.selected_table.setAlternatingRowColors(True)
+
+        # Estilos para la tabla de seleccionados
+        self.selected_table.setStyleSheet("""
+            QTableView {
+                background-color: palette(base);
+                color: palette(text);
+                border: 1px solid palette(mid);
+                selection-background-color: palette(highlight);
+                selection-color: palette(highlighted-text);
+                alternate-background-color: palette(alternate-base);
+                gridline-color: palette(midlight);
+            }
+            QTableView::item {
+                padding: 8px;
+                border-bottom: 1px solid palette(midlight);
+            }
+            QTableView::item:selected {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+                font-weight: bold;
+            }
+            QTableView::item:hover {
+                background-color: palette(light);
+            }
+            QHeaderView::section {
+                background-color: palette(button);
+                color: palette(button-text);
+                padding: 10px;
+                border: 1px solid palette(mid);
+                font-weight: bold;
+                font-size: 11px;
+            }
+            QHeaderView::section:hover {
+                background-color: palette(light);
+            }
+        """)
+        layout.addWidget(self.selected_table)
+
+        # Botones de control
+        buttons_layout = QHBoxLayout()
+
+        self.move_up_button = QPushButton("↑ Subir")
+        self.move_down_button = QPushButton("↓ Bajar")
+        self.remove_button = QPushButton("✕ Eliminar")
+        self.clear_button = QPushButton("🗑 Limpiar Todo")
+
+        # Estilos para botones
+        button_style = """
+            QPushButton {
+                background-color: palette(button);
+                color: palette(button-text);
+                border: 2px solid palette(mid);
+                border-radius: 6px;
+                padding: 6px 12px;
+                margin: 2px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: palette(light);
+                border-color: palette(highlight);
+            }
+            QPushButton:pressed {
+                background-color: palette(midlight);
+            }
+            QPushButton:disabled {
+                background-color: palette(window);
+                color: palette(disabled-text);
+                border-color: palette(midlight);
+            }
+        """
+
+        for button in [self.move_up_button, self.move_down_button, self.remove_button, self.clear_button]:
+            button.setStyleSheet(button_style)
+            button.setEnabled(False)
+
+        self.remove_button.setStyleSheet(button_style + """
+            QPushButton {
+                color: #d32f2f;
+                border-color: #d32f2f;
+            }
+            QPushButton:hover {
+                background-color: #ffebee;
+                border-color: #b71c1c;
+            }
+            QPushButton:pressed {
+                background-color: #ffcdd2;
+            }
+        """)
+
+        self.clear_button.setStyleSheet(button_style + """
+            QPushButton {
+                color: #d32f2f;
+                border-color: #d32f2f;
+            }
+            QPushButton:hover {
+                background-color: #ffebee;
+                border-color: #b71c1c;
+            }
+            QPushButton:pressed {
+                background-color: #ffcdd2;
+            }
+        """)
+
+        buttons_layout.addWidget(self.move_up_button)
+        buttons_layout.addWidget(self.move_down_button)
+        buttons_layout.addStretch()
+        buttons_layout.addWidget(self.remove_button)
+        buttons_layout.addWidget(self.clear_button)
+
+        layout.addLayout(buttons_layout)
+
+        return panel
+
+    def _setup_tree_view(self):
+        """Configurar vista de árbol"""
+        self.tree_view.setRootIsDecorated(True)
+        self.tree_view.setAlternatingRowColors(True)
+        self.tree_view.setSortingEnabled(True)
+        self.tree_view.setSelectionMode(QTreeView.SelectionMode.ExtendedSelection)
+
+        # Estilos adaptativos para tema oscuro
+        self.tree_view.setStyleSheet("""
+            QTreeView {
+                background-color: palette(base);
+                color: palette(text);
+                border: 1px solid palette(mid);
+                selection-background-color: palette(highlight);
+                selection-color: palette(highlighted-text);
+                alternate-background-color: palette(alternate-base);
+            }
+            QTreeView::item {
+                padding: 4px;
+                border-bottom: 1px solid palette(midlight);
+            }
+            QTreeView::item:selected {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }
+            QTreeView::item:hover {
+                background-color: palette(light);
+            }
+        """)
+
+    def _setup_table_view(self):
+        """Configurar vista de tabla"""
+        self.table_view.setAlternatingRowColors(True)
+        self.table_view.setSortingEnabled(True)
+        self.table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+        self.table_view.setSelectionMode(QTableView.SelectionMode.ExtendedSelection)
+
+        # Configurar headers
+        header = self.table_view.horizontalHeader()
+        header.setStretchLastSection(True)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+
+        # Estilos adaptativos para tema oscuro
+        self.table_view.setStyleSheet("""
+            QTableView {
+                background-color: palette(base);
+                color: palette(text);
+                border: 1px solid palette(mid);
+                selection-background-color: palette(highlight);
+                selection-color: palette(highlighted-text);
+                alternate-background-color: palette(alternate-base);
+                gridline-color: palette(midlight);
+            }
+            QTableView::item {
+                padding: 6px;
+                border-bottom: 1px solid palette(midlight);
+            }
+            QTableView::item:selected {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }
+            QTableView::item:hover {
+                background-color: palette(light);
+            }
+            QHeaderView::section {
+                background-color: palette(button);
+                color: palette(button-text);
+                padding: 8px;
+                border: 1px solid palette(mid);
+                font-weight: bold;
+            }
+            QHeaderView::section:hover {
+                background-color: palette(light);
+            }
+        """)
+
+    def _setup_models(self):
+        """Configurar modelos de datos"""
+        # Modelo del sistema de archivos
+        self.fs_model = QFileSystemModel()
+        self.fs_model.setRootPath('')
+        self.fs_model.setNameFilters(['*.pdf'])
+        self.fs_model.setNameFilterDisables(False)
+
+        # Modelo proxy para filtrar
+        self.filter_model = PDFFilterModel()
+        self.filter_model.setSourceModel(self.fs_model)
+
+        # Configurar vistas con el modelo filtrado
+        self.tree_view.setModel(self.filter_model)
+        self.table_view.setModel(self.filter_model)
+
+        # Ocultar columnas innecesarias en la vista de árbol
+        for column in range(1, self.fs_model.columnCount()):
+            self.tree_view.hideColumn(column)
+
+        # Modelo para archivos seleccionados
+        self.selected_model = SelectedFilesModel()
+        self.selected_table.setModel(self.selected_model)
+
+        # Configurar tamaños de columnas
+        header = self.selected_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Título
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Archivo
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # Tamaño
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)  # Ruta
+
+    def _setup_connections(self):
+        """Configurar conexiones de señales"""
+        # Navegación
+        self.up_button.clicked.connect(self._go_up_directory)
+        self.browse_button.clicked.connect(self._browse_directory)
+
+        # Cambio de vista
+        self.view_combo.currentTextChanged.connect(self._toggle_view)
+
+        # Selección en vistas de archivos
+        self.tree_view.selectionModel().selectionChanged.connect(self._on_file_selection_changed)
+        self.table_view.selectionModel().selectionChanged.connect(self._on_file_selection_changed)
+
+        # Doble click para navegar/agregar
+        self.tree_view.doubleClicked.connect(self._on_file_double_clicked)
+        self.table_view.doubleClicked.connect(self._on_file_double_clicked)
+
+        # Botones de archivo
+        self.add_button.clicked.connect(self._add_selected_files)
+
+        # Selección en tabla de archivos seleccionados
+        self.selected_table.selectionModel().selectionChanged.connect(self._on_selected_files_selection_changed)
+
+        # Botones de control de archivos seleccionados
+        self.move_up_button.clicked.connect(self._move_selected_up)
+        self.move_down_button.clicked.connect(self._move_selected_down)
+        self.remove_button.clicked.connect(self._remove_selected_files)
+        self.clear_button.clicked.connect(self._clear_selected_files)
+
+    def _update_current_directory(self):
+        """Actualizar información del directorio actual"""
+        current_path = Path(self.file_manager.current_directory)
+        home_path = Path.home()
+
+        # Mostrar ruta relativa al home si es posible
+        try:
+            if current_path.is_relative_to(home_path):
+                display_path = "~" / current_path.relative_to(home_path)
+            else:
+                display_path = current_path
+        except:
+            display_path = current_path
+
+        self.current_dir_label.setText(f"📁 {display_path}")
+
+        # Configurar raíz de las vistas
+        root_index = self.fs_model.index(str(current_path))
+        proxy_root = self.filter_model.mapFromSource(root_index)
+
+        self.tree_view.setRootIndex(proxy_root)
+        self.table_view.setRootIndex(proxy_root)
+
+        # Habilitar/deshabilitar botón de subir
+        self.up_button.setEnabled(self.file_manager.can_go_up())
+
+        # Emitir señal
+        self.current_directory_changed.emit(str(current_path))
+
+    def _toggle_view(self, view_name: str):
+        """Alternar entre vista de árbol y tabla"""
+        if view_name == "Árbol":
+            self.table_view.hide()
+            self.tree_view.show()
+        else:
+            self.tree_view.hide()
+            self.table_view.show()
+
+    def _go_up_directory(self):
+        """Navegar al directorio padre"""
+        if self.file_manager.go_up():
+            self._update_current_directory()
+
+    def _browse_directory(self):
+        """Abrir diálogo para seleccionar directorio"""
+        directory = QFileDialog.getExistingDirectory(
+            self,
+            "Seleccionar Directorio",
+            self.file_manager.current_directory
+        )
+
+        if directory:
+            if self.file_manager.set_current_directory(directory):
+                self._update_current_directory()
+
+    def _get_current_view(self) -> QTreeView:
+        """Obtener la vista actualmente visible"""
+        return self.tree_view if self.tree_view.isVisible() else self.table_view
+
+    def _on_file_selection_changed(self):
+        """Manejar cambio de selección en archivos"""
+        current_view = self._get_current_view()
+        selection = current_view.selectionModel().selectedIndexes()
+
+        # Verificar si hay archivos PDF seleccionados
+        has_pdf_files = False
+        for index in selection:
+            if index.column() == 0:  # Solo considerar la primera columna
+                source_index = self.filter_model.mapToSource(index)
+                if not self.fs_model.isDir(source_index):
+                    file_path = self.fs_model.filePath(source_index)
+                    if file_path.lower().endswith('.pdf'):
+                        has_pdf_files = True
+                        break
+
+        self.add_button.setEnabled(has_pdf_files)
+
+    def _on_file_double_clicked(self, index: QModelIndex):
+        """Manejar doble click en archivo o directorio"""
+        source_index = self.filter_model.mapToSource(index)
+
+        if self.fs_model.isDir(source_index):
+            # Navegar al directorio
+            dir_path = self.fs_model.filePath(source_index)
+            if self.file_manager.set_current_directory(dir_path):
+                self._update_current_directory()
+        else:
+            # Agregar archivo PDF
+            file_path = self.fs_model.filePath(source_index)
+            if file_path.lower().endswith('.pdf'):
+                self._add_file_to_selection(file_path)
+
+    def _add_selected_files(self):
+        """Agregar archivos seleccionados a la lista"""
+        current_view = self._get_current_view()
+        selection = current_view.selectionModel().selectedIndexes()
+
+        added_files = []
+        for index in selection:
+            if index.column() == 0:  # Solo procesar la primera columna
+                source_index = self.filter_model.mapToSource(index)
+                if not self.fs_model.isDir(source_index):
+                    file_path = self.fs_model.filePath(source_index)
+                    if file_path.lower().endswith('.pdf'):
+                        if self._add_file_to_selection(file_path):
+                            added_files.append(file_path)
+
+        if added_files:
+            self._emit_files_changed()
+
+    def _add_file_to_selection(self, file_path: str) -> bool:
+        """Agregar un archivo a la selección"""
+        if file_path not in self.selected_files_set:
+            if self.selected_model.add_file(file_path):
+                self.selected_files_set.add(file_path)
+                self._update_selected_buttons_state()
+                return True
+        return False
+
+    def _on_selected_files_selection_changed(self):
+        """Manejar cambio de selección en archivos seleccionados"""
+        self._update_selected_buttons_state()
+
+    def _update_selected_buttons_state(self):
+        """Actualizar estado de botones de archivos seleccionados"""
+        has_files = len(self.selected_model.selected_files) > 0
+        has_selection = len(self.selected_table.selectionModel().selectedRows()) > 0
+
+        self.clear_button.setEnabled(has_files)
+        self.remove_button.setEnabled(has_selection)
+        self.move_up_button.setEnabled(has_selection)
+        self.move_down_button.setEnabled(has_selection)
+
+    def _move_selected_up(self):
+        """Mover archivo seleccionado hacia arriba"""
+        selected_rows = [index.row() for index in self.selected_table.selectionModel().selectedRows()]
+        if selected_rows:
+            row = min(selected_rows)
+            if row > 0:
+                if self.selected_model.move_file(row, row - 1):
+                    # Mantener selección
+                    self.selected_table.selectRow(row - 1)
+                    self._emit_files_changed()
+
+    def _move_selected_down(self):
+        """Mover archivo seleccionado hacia abajo"""
+        selected_rows = [index.row() for index in self.selected_table.selectionModel().selectedRows()]
+        if selected_rows:
+            row = max(selected_rows)
+            if row < len(self.selected_model.selected_files) - 1:
+                if self.selected_model.move_file(row, row + 1):
+                    # Mantener selección
+                    self.selected_table.selectRow(row + 1)
+                    self._emit_files_changed()
+
+    def _remove_selected_files(self):
+        """Remover archivos seleccionados"""
+        selected_rows = sorted([index.row() for index in self.selected_table.selectionModel().selectedRows()],
+                              reverse=True)
+
+        for row in selected_rows:
+            if 0 <= row < len(self.selected_model.selected_files):
+                file_path = self.selected_model.selected_files[row]
+                self.selected_files_set.discard(file_path)
+                self.selected_model.remove_file(row)
+
+        self._update_selected_buttons_state()
+        self._emit_files_changed()
+
+    def _clear_selected_files(self):
+        """Limpiar todos los archivos seleccionados"""
+        self.selected_files_set.clear()
+        self.selected_model.clear_files()
+        self._update_selected_buttons_state()
+        self._emit_files_changed()
+
+    def _emit_files_changed(self):
+        """Emitir señal de cambio en archivos seleccionados"""
+        self.files_selected.emit(self.selected_model.get_selected_files())
+
+    # Métodos públicos para interacción externa
+
+    def get_selected_files(self) -> List[str]:
+        """Obtener lista de archivos seleccionados"""
+        return self.selected_model.get_selected_files()
+
+    def set_current_directory(self, directory: str) -> bool:
+        """Establecer directorio actual"""
+        if self.file_manager.set_current_directory(directory):
+            self._update_current_directory()
+            return True
+        return False
+
+    def refresh(self):
+        """Refrescar vista de archivos"""
+        self._update_current_directory()
+
+    def clear_selection(self):
+        """Limpiar selección de archivos"""
+        self._clear_selected_files()
