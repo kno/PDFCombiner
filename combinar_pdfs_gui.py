@@ -3,9 +3,25 @@ import sys
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,
                             QListWidget, QPushButton, QLabel, QCheckBox, QMessageBox,
                             QFileDialog, QWidget, QListWidgetItem, QFrame)
-from PyQt6.QtCore import Qt, QMimeData, pyqtSignal
-from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QDragMoveEvent
+from PyQt6.QtCore import Qt, QMimeData, pyqtSignal, QRect
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QDragMoveEvent, QColor, QBrush, QPainter
 from pdf_utils import AdvancedPDFCombiner, TextProcessor
+
+class MarkedListWidgetItem(QListWidgetItem):
+    """Item personalizado que puede ser marcado visualmente"""
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+        self.is_marked = False
+
+    def set_marked(self, marked):
+        """Marcar o desmarcar el item"""
+        self.is_marked = marked
+        if marked:
+            self.setBackground(QBrush(QColor(76, 175, 80)))  # Verde
+            self.setForeground(QBrush(QColor(0, 0, 0)))      # Texto negro
+        else:
+            self.setBackground(QBrush(QColor(0, 0, 0, 0)))   # Transparente
+            self.setForeground(QBrush(QColor(255, 255, 255))) # Texto blanco
 
 # Constantes de estilo
 BUTTON_STYLES = {
@@ -69,6 +85,7 @@ class DragDropListWidget(QListWidget):
         super().__init__(parent)
         self.show_tooltips = show_tooltips
         self.file_tooltips = {}
+        self.marked_items = set()  # Conjunto para rastrear elementos marcados
         self.setDragDropMode(QListWidget.DragDropMode.InternalMove)
 
         # Solo habilitar drag & drop en la lista de seleccionados
@@ -77,9 +94,58 @@ class DragDropListWidget(QListWidget):
         else:
             self.setDragDropMode(QListWidget.DragDropMode.NoDragDrop)
 
+    def paintEvent(self, event):
+        """Sobrescribir el evento de pintado para manejar elementos marcados"""
+        super().paintEvent(event)
+
+        # Pintar overlay verde para elementos marcados
+        if hasattr(self, 'objectName') and self.objectName() == "file_listbox":
+            painter = QPainter(self.viewport())
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+            for row in self.marked_items:
+                if row < self.count():
+                    item_rect = self.visualItemRect(self.item(row))
+                    if item_rect.isValid():
+                        # Pintar fondo verde con transparencia
+                        painter.fillRect(item_rect, QColor(76, 175, 80, 180))
+
+                        # Pintar texto negro encima
+                        painter.setPen(QColor(0, 0, 0))
+                        text = self.item(row).text()
+                        painter.drawText(item_rect.adjusted(8, 0, -8, 0),
+                                       Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                                       text)
+
+            painter.end()
+
     def set_tooltips(self, tooltips_dict):
         """Establecer el diccionario de tooltips"""
         self.file_tooltips = tooltips_dict
+
+    def mark_item(self, row):
+        """Marcar un elemento con fondo verde"""
+        if 0 <= row < self.count():
+            self.marked_items.add(row)
+            self.viewport().update()  # Forzar repintado
+
+    def unmark_item(self, row):
+        """Desmarcar un elemento"""
+        if row in self.marked_items:
+            self.marked_items.remove(row)
+            self.viewport().update()  # Forzar repintado
+
+    def clear_marks(self):
+        """Limpiar todas las marcas"""
+        self.marked_items.clear()
+        self.viewport().update()  # Forzar repintado
+
+    def update_marks(self, marked_filenames):
+        """Actualizar marcas basándose en una lista de nombres de archivo"""
+        self.clear_marks()
+        for row, filename in self.file_tooltips.items():
+            if filename in marked_filenames:
+                self.mark_item(row)
 
     def mouseMoveEvent(self, event):
         """Mostrar tooltip al mover el mouse"""
@@ -145,6 +211,7 @@ class PDFCombinerGUI(QMainWindow):
             list_widget.is_selected_list = True
             list_widget.setDragDropMode(QListWidget.DragDropMode.InternalMove)
         else:
+            list_widget.is_selected_list = False  # Explícitamente marcar como lista de archivos
             list_widget.setDragDropMode(QListWidget.DragDropMode.NoDragDrop)
 
         if multi_selection:
@@ -159,7 +226,11 @@ class PDFCombinerGUI(QMainWindow):
 
         for i, filename in enumerate(files):
             title = TextProcessor.extract_title(filename)
-            item = QListWidgetItem(title)
+            # Usar la clase personalizada solo para la lista de archivos (navegador)
+            if hasattr(list_widget, 'is_selected_list') and not list_widget.is_selected_list:
+                item = MarkedListWidgetItem(title)
+            else:
+                item = QListWidgetItem(title)
             list_widget.addItem(item)
             tooltips_dict[i] = filename
 
@@ -198,6 +269,7 @@ class PDFCombinerGUI(QMainWindow):
 
         # Frame izquierdo - Navegador de archivos
         self.file_listbox = self.setup_list_widget(multi_selection=True)
+        self.file_listbox.setObjectName("file_listbox")  # Asignar ID específico
         self.file_listbox.itemDoubleClicked.connect(self.on_file_double_click)
         left_frame = self.create_list_frame("Navegador de archivos", self.file_listbox)
 
@@ -264,6 +336,7 @@ class PDFCombinerGUI(QMainWindow):
         try:
             pdfs = [f for f in os.listdir('.') if f.lower().endswith('.pdf')]
             self.populate_list_with_titles(self.file_listbox, sorted(pdfs), self.file_tooltips)
+            self.update_visual_marks()  # Actualizar marcas después de poblar la lista
         except Exception as e:
             QMessageBox.warning(self, "Advertencia", f"Error al cargar archivos: {e}")
 
@@ -279,6 +352,7 @@ class PDFCombinerGUI(QMainWindow):
                     self.selected_files.append(filename)
 
         self.refresh_selected_listbox()
+        self.update_visual_marks()
 
     def handle_file_action(self, item, action_type):
         """Manejar acciones sobre archivos (add/remove)"""
@@ -289,11 +363,13 @@ class PDFCombinerGUI(QMainWindow):
                 if filename not in self.selected_files:
                     self.selected_files.append(filename)
                     self.refresh_selected_listbox()
+                    self.update_visual_marks()
         elif action_type == 'remove':
             row = self.selected_listbox.row(item)
             if 0 <= row < len(self.selected_files):
                 self.selected_files.pop(row)
                 self.refresh_selected_listbox()
+                self.update_visual_marks()
 
     def on_file_double_click(self, item):
         """Manejar doble click en archivo"""
@@ -307,12 +383,17 @@ class PDFCombinerGUI(QMainWindow):
         """Actualizar la lista de archivos seleccionados"""
         self.populate_list_with_titles(self.selected_listbox, self.selected_files, self.selected_tooltips)
 
+    def update_visual_marks(self):
+        """Actualizar las marcas visuales en la lista de archivos"""
+        self.file_listbox.update_marks(self.selected_files)
+
     def remove_selected(self):
         """Eliminar archivo seleccionado de la lista"""
         current_row = self.selected_listbox.currentRow()
         if current_row >= 0 and current_row < len(self.selected_files):
             self.selected_files.pop(current_row)
             self.refresh_selected_listbox()
+            self.update_visual_marks()
 
     def move_up(self):
         """Mover archivo hacia arriba en la lista"""
@@ -430,12 +511,31 @@ def get_dark_theme_stylesheet():
         QListWidget::item {
             padding: 8px;
             border-bottom: 1px solid #555555;
+            background-color: transparent;
         }
         QListWidget::item:selected {
-            background-color: #0078d4;
+            background-color: #0078d4 !important;
         }
         QListWidget::item:hover {
             background-color: #505050;
+        }
+        QListWidget#file_listbox::item {
+            background-color: transparent;
+        }
+        QListWidget#file_listbox::item:selected {
+            background-color: #0078d4 !important;
+        }
+        QListWidget#file_listbox::item[marked="true"] {
+            background-color: #4CAF50 !important;
+            color: #000000 !important;
+        }
+        QListWidget#file_listbox::item[marked="true"]:hover {
+            background-color: #45a049 !important;
+            color: #000000 !important;
+        }
+        QListWidget#file_listbox::item[marked="true"]:selected {
+            background-color: #2E7D32 !important;
+            color: #ffffff !important;
         }
         QLabel {
             color: #ffffff;
