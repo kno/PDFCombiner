@@ -60,7 +60,7 @@ jobs:
       run: |
         pyinstaller PDFCombinerPro.spec
 
-    - name: Prepare macOS artifacts  
+    - name: Prepare macOS artifacts
       if: matrix.os == 'macos-latest'
       run: |
         ls -la dist/
@@ -126,7 +126,7 @@ jobs:
         - **macOS**: Descarga PDFCombinerPro-macOS.zip, descomprime y ejecuta
         - **Windows**: Descarga PDFCombinerPro-Windows.exe y ejecuta directamente
 
-        ### 📋 Características  
+        ### 📋 Características
         - Interfaz gráfica moderna con tema oscuro
         - Combinación inteligente de PDFs
         - Generación automática de índices interactivos
@@ -135,7 +135,7 @@ jobs:
         - Extracción automática de títulos
 
         ### 💻 Requisitos del Sistema
-        - **macOS**: macOS 10.14 o superior  
+        - **macOS**: macOS 10.14 o superior
         - **Windows**: Windows 10 o superior
         - **RAM**: 512MB disponible
         - **Espacio**: 50MB libres" \
