@@ -84,11 +84,31 @@ class MarkedListWidget(QListWidget):
         self.viewport().update()
 
     def update_marks(self, marked_filenames: List[str]) -> None:
-        """Actualizar marcas basándose en lista de archivos"""
+        """Actualizar marcas basándose en lista de archivos seleccionados"""
         self.clear_marks()
-        for row, filename in self.file_tooltips.items():
-            if filename in marked_filenames:
-                self.mark_item(row)
+
+        # Revisar cada item en la lista
+        for row in range(self.count()):
+            item = self.item(row)
+            if item:
+                # Obtener los datos del DirectoryEntry
+                entry_data = item.data(Qt.ItemDataRole.UserRole)
+
+                # Importar DirectoryEntry dentro del método para evitar problemas circulares
+                from core.file_manager import DirectoryEntry
+
+                if isinstance(entry_data, DirectoryEntry):
+                    # Solo marcar archivos PDF, no directorios
+                    if not entry_data.is_directory and entry_data.name != "..":
+                        file_path = str(entry_data.path)
+                        if file_path in marked_filenames:
+                            self.mark_item(row)
+                else:
+                    # Compatibilidad con el sistema anterior
+                    if row in self.file_tooltips:
+                        filename = self.file_tooltips[row]
+                        if filename in marked_filenames:
+                            self.mark_item(row)
 
     def mouseMoveEvent(self, event):
         """Mostrar tooltip al mover el mouse"""
