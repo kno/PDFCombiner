@@ -11,7 +11,7 @@ He configurado tu proyecto para crear automáticamente versiones ejecutables par
 
 ### 2. Scripts de Construcción Local
 - **`build.sh`** - Script para macOS/Linux
-- **`build.ps1`** - Script para Windows PowerShell  
+- **`build.ps1`** - Script para Windows PowerShell
 - **`test_build.py`** - Script de verificación de dependencias
 
 ### 3. Configuración de PyInstaller
@@ -159,10 +159,10 @@ El workflow necesita permisos para:
 
 Tu proyecto ahora puede:
 
-✅ **Crear ejecutables automáticamente** con cada release  
-✅ **Funcionar en macOS y Windows** sin Python instalado  
-✅ **Distribuirse fácilmente** a través de GitHub Releases  
-✅ **Ser probado localmente** antes de publicar  
+✅ **Crear ejecutables automáticamente** con cada release
+✅ **Funcionar en macOS y Windows** sin Python instalado
+✅ **Distribuirse fácilmente** a través de GitHub Releases
+✅ **Ser probado localmente** antes de publicar
 
 ### Próximo Paso
 

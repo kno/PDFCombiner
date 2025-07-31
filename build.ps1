@@ -61,10 +61,10 @@ Write-Host "🪟 Preparando ejecutable para Windows..." -ForegroundColor Yellow
 if (Test-Path "dist\PDFCombinerPro.exe") {
     Write-Host "✅ Ejecutable creado exitosamente" -ForegroundColor Green
     Copy-Item "dist\PDFCombinerPro.exe" "PDFCombinerPro-Windows.exe"
-    
+
     $fileSize = (Get-Item "PDFCombinerPro-Windows.exe").Length
     $fileSizeMB = [math]::Round($fileSize / 1MB, 2)
-    
+
     Write-Host "📦 Archivo creado: PDFCombinerPro-Windows.exe" -ForegroundColor Green
     Write-Host "   Tamaño: $fileSizeMB MB" -ForegroundColor Cyan
 } else {
