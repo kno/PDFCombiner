@@ -1,0 +1,189 @@
+name: Build and Release PDF Combiner Pro
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags like v1.0.0
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            artifact_name: PDFCombinerPro-macOS
+            build_name: PDFCombinerPro
+          - os: windows-latest
+            artifact_name: PDFCombinerPro-Windows
+            build_name: PDFCombinerPro.exe
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install system dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install qt6
+
+    - name: Install system dependencies (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        # Windows doesn't need additional system dependencies for Qt6
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Create build directory
+      run: mkdir -p dist
+
+    - name: Create placeholder icons
+      run: |
+        mkdir -p assets
+        # Create a simple placeholder icon file (this will be replaced with actual icons later)
+        if [ "${{ matrix.os }}" == "macos-latest" ]; then
+          echo "placeholder" > assets/icon.icns
+        else
+          echo "placeholder" > assets/icon.ico
+        fi
+
+    - name: Build executable using spec file
+      run: |
+        pyinstaller PDFCombinerPro.spec
+
+    - name: Prepare artifacts (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        # The .app bundle should be created by PyInstaller
+        if [ -d "dist/PDFCombinerPro.app" ]; then
+          zip -r PDFCombinerPro-macOS.zip dist/PDFCombinerPro.app
+        else
+          # Fallback: create app bundle manually
+          mkdir -p "PDFCombinerPro.app/Contents/MacOS"
+          mkdir -p "PDFCombinerPro.app/Contents/Resources"
+          
+          # Copy executable
+          cp dist/PDFCombinerPro "PDFCombinerPro.app/Contents/MacOS/"
+          
+          # Create Info.plist
+          cat > "PDFCombinerPro.app/Contents/Info.plist" << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleExecutable</key>
+              <string>PDFCombinerPro</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.pdfcombinerpro.app</string>
+              <key>CFBundleName</key>
+              <string>PDF Combiner Pro</string>
+              <key>CFBundleVersion</key>
+              <string>1.0</string>
+              <key>CFBundleShortVersionString</key>
+              <string>1.0</string>
+              <key>CFBundleInfoDictionaryVersion</key>
+              <string>6.0</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>NSHighResolutionCapable</key>
+              <true/>
+          </dict>
+          </plist>
+          EOF
+          
+          zip -r PDFCombinerPro-macOS.zip PDFCombinerPro.app
+        fi
+
+    - name: Prepare artifacts (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        copy dist\PDFCombinerPro.exe PDFCombinerPro-Windows.exe
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: |
+          ${{ matrix.os == 'macos-latest' && 'PDFCombinerPro-macOS.zip' || 'PDFCombinerPro-Windows.exe' }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: PDF Combiner Pro ${{ github.ref_name }}
+        draft: false
+        prerelease: false
+        body: |
+          ## PDF Combiner Pro ${{ github.ref_name }}
+          
+          ### 🚀 Descargas
+          
+          - **macOS**: Descarga `PDFCombinerPro-macOS.zip`, descomprime y ejecuta la aplicación
+          - **Windows**: Descarga `PDFCombinerPro-Windows.exe` y ejecuta directamente
+          
+          ### 📋 Características
+          
+          - Interfaz gráfica moderna con tema oscuro
+          - Combinación inteligente de PDFs
+          - Generación automática de índices interactivos
+          - Explorador de archivos integrado
+          - Soporte para drag & drop
+          - Extracción automática de títulos
+          
+          ### 💻 Requisitos del Sistema
+          
+          - **macOS**: macOS 10.14 o superior
+          - **Windows**: Windows 10 o superior
+          - **RAM**: 512MB disponible
+          - **Espacio**: 50MB libres
+          
+          ### 🐛 ¿Problemas?
+          
+          Si encuentras algún problema, por favor reporta un issue en el repositorio.
+
+    - name: Upload macOS Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./PDFCombinerPro-macOS/PDFCombinerPro-macOS.zip
+        asset_name: PDFCombinerPro-macOS.zip
+        asset_content_type: application/zip
+
+    - name: Upload Windows Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./PDFCombinerPro-Windows/PDFCombinerPro-Windows.exe
+        asset_name: PDFCombinerPro-Windows.exe
+        asset_content_type: application/octet-stream

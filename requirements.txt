@@ -18,3 +18,6 @@ PyQt6==6.9.1
 
 # Additional dependencies for cross-platform compatibility
 blessed==1.20.0
+
+# Build tools (for creating executables)
+pyinstaller==6.11.1
