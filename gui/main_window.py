@@ -159,13 +159,22 @@ class PDFCombinerGUI(QMainWindow):
         return button
 
     def _load_initial_files(self):
-        """Cargar archivos iniciales"""
+        """Cargar archivos iniciales ordenados alfabéticamente por título"""
         try:
-            pdf_files = self.file_manager.get_pdf_files()
+            # Usar ordenamiento por títulos extraídos para mejor experiencia de usuario
+            pdf_files = self.file_manager.get_pdf_files_sorted_by_title()
             self._populate_list_with_titles(self.file_listbox, pdf_files, self.file_tooltips)
             self._update_visual_marks()
         except FileManagerError as e:
             QMessageBox.warning(self, "Advertencia", f"Error al cargar archivos: {e}")
+        except Exception as e:
+            # Fallback a ordenamiento simple si hay algún problema
+            try:
+                pdf_files = self.file_manager.get_pdf_files()
+                self._populate_list_with_titles(self.file_listbox, pdf_files, self.file_tooltips)
+                self._update_visual_marks()
+            except FileManagerError as fallback_error:
+                QMessageBox.warning(self, "Advertencia", f"Error al cargar archivos: {fallback_error}")
 
     def _populate_list_with_titles(self, list_widget: DragDropListWidget,
                                   files: List[str], tooltips_dict: Dict[int, str]):
@@ -220,6 +229,24 @@ class PDFCombinerGUI(QMainWindow):
     def _update_visual_marks(self):
         """Actualizar las marcas visuales en la lista de archivos"""
         self.file_listbox.update_marks(self.selected_files)
+
+    def _reload_file_list(self):
+        """Recargar la lista de archivos manteniendo selecciones"""
+        try:
+            # Guardar archivos seleccionados
+            selected_files_backup = self.selected_files.copy()
+
+            # Recargar archivos
+            pdf_files = self.file_manager.get_pdf_files_sorted_by_title()
+            self._populate_list_with_titles(self.file_listbox, pdf_files, self.file_tooltips)
+
+            # Restaurar selecciones
+            self.selected_files = selected_files_backup
+            self._refresh_selected_listbox()
+            self._update_visual_marks()
+
+        except Exception as e:
+            QMessageBox.warning(self, "Advertencia", f"Error al recargar archivos: {e}")
 
     def _remove_selected(self):
         """Eliminar archivo seleccionado de la lista"""
@@ -315,8 +342,11 @@ class PDFCombinerGUI(QMainWindow):
         key = event.key()
         modifiers = event.modifiers()
 
+        # F5 para recargar lista de archivos
+        if key == Qt.Key.Key_F5:
+            self._reload_file_list()
         # Tab para cambiar entre listas
-        if key == Qt.Key.Key_Tab:
+        elif key == Qt.Key.Key_Tab:
             self._handle_tab_navigation()
         # Enter para añadir archivos
         elif key == Qt.Key.Key_Return and self.file_listbox.hasFocus():

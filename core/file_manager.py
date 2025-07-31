@@ -14,13 +14,31 @@ class FileManager:
 
     @staticmethod
     def get_pdf_files(directory: str = ".") -> List[str]:
-        """Obtener lista de archivos PDF en directorio"""
+        """Obtener lista de archivos PDF en directorio ordenada alfabéticamente"""
         try:
             files = [f for f in os.listdir(directory)
                     if f.lower().endswith('.pdf') and os.path.isfile(os.path.join(directory, f))]
-            return sorted(files)
+            # Ordenamiento alfabético insensible a mayúsculas/minúsculas
+            return sorted(files, key=lambda x: x.lower())
         except OSError as e:
             raise FileManagerError(f"Error al acceder al directorio: {e}")
+
+    @staticmethod
+    def get_pdf_files_sorted_by_title(directory: str = ".") -> List[str]:
+        """Obtener lista de archivos PDF ordenada por títulos extraídos"""
+        try:
+            from utils.text_processor import TextProcessor
+
+            files = [f for f in os.listdir(directory)
+                    if f.lower().endswith('.pdf') and os.path.isfile(os.path.join(directory, f))]
+
+            # Ordenar por título extraído (insensible a mayúsculas/minúsculas)
+            return sorted(files, key=lambda x: TextProcessor.extract_title(x).lower())
+        except OSError as e:
+            raise FileManagerError(f"Error al acceder al directorio: {e}")
+        except ImportError as e:
+            # Fallback a ordenamiento por nombre de archivo si no se puede importar TextProcessor
+            return FileManager.get_pdf_files(directory)
 
     @staticmethod
     def validate_output_path(path: str) -> bool:
