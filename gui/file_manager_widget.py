@@ -12,10 +12,31 @@ from PyQt6.QtCore import (
     Qt, QModelIndex, pyqtSignal,
     QDir, QSortFilterProxyModel, QTimer
 )
-from PyQt6.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap, QPainter, QFileSystemModel
+from PyQt6.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap, QPainter, QFileSystemModel, QDropEvent
 from core.file_manager import FileManager, FileManagerError
 from utils.text_processor import TextProcessor
 from gui.styles import FileManagerStyles
+
+class CustomListView(QListView):
+    """ListView personalizado para detectar la posición real del drop"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.actual_drop_row = -1
+
+    def dropEvent(self, event: QDropEvent):
+        """Capturar la posición real del drop"""
+        drop_index = self.indexAt(event.position().toPoint())
+        if drop_index.isValid():
+            self.actual_drop_row = drop_index.row()
+        else:
+            self.actual_drop_row = -1
+
+        # Pasar la información al modelo antes del drop
+        if hasattr(self.model(), 'set_actual_drop_row'):
+            self.model().set_actual_drop_row(self.actual_drop_row)
+
+        super().dropEvent(event)
 
 class PDFFilterModel(QSortFilterProxyModel):
     """Modelo proxy para filtrar solo archivos PDF y directorios, con navegación hacia arriba integrada"""
@@ -49,6 +70,10 @@ class SelectedFilesModel(QStandardItemModel):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.selected_files: List[str] = []
+        # Variables para rastrear drag and drop
+        self.drag_source_row = -1
+        self.drag_file_path = None
+        self.actual_drop_row = -1  # Posición real del drop desde CustomListView
 
     def supportedDropActions(self):
         """Acciones de drop soportadas"""
@@ -61,25 +86,62 @@ class SelectedFilesModel(QStandardItemModel):
             return default_flags | Qt.ItemFlag.ItemIsDragEnabled | Qt.ItemFlag.ItemIsDropEnabled
         return default_flags | Qt.ItemFlag.ItemIsDropEnabled
 
+    def mimeData(self, indexes):
+        """Capturar datos del elemento que se está arrastrando"""
+        if indexes:
+            index = indexes[0]
+            self.drag_source_row = index.row()
+            item = self.itemFromIndex(index)
+            if item:
+                self.drag_file_path = item.data(Qt.ItemDataRole.UserRole)
+            else:
+                self.drag_file_path = None
+        return super().mimeData(indexes)
+
+    def set_actual_drop_row(self, row: int):
+        """Establecer la posición real del drop desde CustomListView"""
+        self.actual_drop_row = row
+
     def dropMimeData(self, data, action, row, column, parent):
-        """Manejar el drop de items para reordenar de forma más robusta"""
+        """Manejar el drop de items para reordenar manualmente"""
         if action != Qt.DropAction.MoveAction:
             return False
 
-        # Si row es -1, significa que se soltó al final
-        if row == -1:
-            row = self.rowCount()
+        if self.drag_source_row == -1 or not self.drag_file_path:
+            return super().dropMimeData(data, action, row, column, parent)
 
-        # Obtener el índice de donde se originó el drag
-        if not data.hasFormat('application/x-qabstractitemmodeldatalist'):
+        # Determinar la posición de destino - usar la posición real si está disponible
+        target_row = self.actual_drop_row if self.actual_drop_row != -1 else row
+        if target_row == -1:
+            target_row = len(self.selected_files)
+
+        # Ajustar target_row si está moviendo hacia abajo
+        if self.drag_source_row < target_row:
+            target_row -= 1
+
+        # Hacer el movimiento manualmente
+        if self.drag_source_row != target_row and 0 <= target_row <= len(self.selected_files):
+            # Mover en la lista de archivos
+            file_path = self.selected_files.pop(self.drag_source_row)
+            self.selected_files.insert(target_row, file_path)
+
+            # Actualizar el modelo para reflejar el nuevo orden
+            self._rebuild_model()
+
+            # Emitir señal de cambio
+            self.files_reordered.emit()
+
+            # Limpiar variables de drag
+            self.drag_source_row = -1
+            self.drag_file_path = None
+            self.actual_drop_row = -1
+
+            return True
+        else:
+            self.drag_source_row = -1
+            self.drag_file_path = None
+            self.actual_drop_row = -1
             return False
-
-        # Realizar el drop usando la implementación base
-        result = super().dropMimeData(data, action, row, column, parent)
-
-        # No sincronizamos aquí, dejamos que removeRows maneje la sincronización final
-
-        return result
 
     def moveRows(self, sourceParent, sourceFirst, sourceLast, destinationParent, destinationChild):
         """Implementar moveRows para manejar el movimiento de filas correctamente"""
@@ -94,58 +156,33 @@ class SelectedFilesModel(QStandardItemModel):
 
         # Llamar a la implementación base
         result = super().moveRows(sourceParent, sourceFirst, sourceLast, destinationParent, destinationChild)
-
-        if result:
-            # Sincronizar los archivos después del movimiento
-            QTimer.singleShot(5, self._sync_selected_files_from_model)
-
         return result
 
     def removeRows(self, row, count, parent=QModelIndex()):
-        """Override removeRows para preservar los datos durante drag and drop"""
-        # Guardar los datos antes de remover durante drag and drop
-        items_data = []
-        for i in range(row, min(row + count, self.rowCount())):
-            item = self.item(i)
-            if item:
-                file_path = item.data(Qt.ItemDataRole.UserRole)
-                if file_path:
-                    items_data.append((i, file_path, item.text()))
-
+        """Override removeRows para manejar eliminaciones durante drag and drop"""
         result = super().removeRows(row, count, parent)
-
-        # Restaurar datos perdidos si es necesario
-        if result and items_data:
-            # Buscar si los datos se perdieron
-            missing_files = []
-            for orig_row, file_path, text in items_data:
-                found = False
-                for i in range(self.rowCount()):
-                    item = self.item(i)
-                    if item and item.data(Qt.ItemDataRole.UserRole) == file_path:
-                        found = True
-                        break
-                if not found:
-                    missing_files.append((file_path, text))
-
-            # Re-agregar archivos perdidos al final
-            for file_path, text in missing_files:
-                title_item = QStandardItem(text)
-                title_item.setData(file_path, Qt.ItemDataRole.UserRole)
-                title_item.setIcon(self._get_pdf_icon())
-                self.appendRow(title_item)
-
-        # Sincronizar después de remover con un delay
-        if result:
-            QTimer.singleShot(50, self._sync_selected_files_from_model)
-
         return result
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """Override insertRows para manejar inserciones durante drag and drop"""
         result = super().insertRows(row, count, parent)
-        # NO sincronizar aquí durante drag and drop, dejar que removeRows maneje la sincronización final
         return result
+
+    def _rebuild_model(self):
+        """Reconstruir el modelo basado en la lista actual de archivos"""
+        # Limpiar modelo actual
+        self.clear()
+
+        # Recrear items basado en el orden actual
+        for i, file_path in enumerate(self.selected_files):
+            path_obj = Path(file_path)
+            title = TextProcessor.extract_title(path_obj.name)
+
+            title_item = QStandardItem(title)
+            title_item.setData(file_path, Qt.ItemDataRole.UserRole)
+            title_item.setIcon(self._get_pdf_icon())
+
+            self.appendRow(title_item)
 
     def _sync_selected_files_from_model(self):
         """Sincronizar la lista de archivos con el orden actual del modelo"""
@@ -383,7 +420,7 @@ class FileManagerWidget(QWidget):
         layout.addWidget(title_label)
 
         # Lista de archivos seleccionados
-        self.selected_list = QListView()
+        self.selected_list = CustomListView()
         self.selected_list.setAlternatingRowColors(True)
 
         # Habilitar drag and drop para reordenar
@@ -606,6 +643,7 @@ class FileManagerWidget(QWidget):
     def _move_selected_up(self):
         """Mover archivo seleccionado hacia arriba"""
         selected_rows = [index.row() for index in self.selected_list.selectionModel().selectedRows()]
+
         if selected_rows:
             row = min(selected_rows)
             if row > 0:
@@ -620,6 +658,7 @@ class FileManagerWidget(QWidget):
     def _move_selected_down(self):
         """Mover archivo seleccionado hacia abajo"""
         selected_rows = [index.row() for index in self.selected_list.selectionModel().selectedRows()]
+
         if selected_rows:
             row = max(selected_rows)
             if row < len(self.selected_model.selected_files) - 1:
