@@ -1,3 +1,11 @@
+
+
+<img src="assets/anthropic_logo.svg" alt="Claude Sonnet" width="40" style="vertical-align:middle; margin-right:8px;"/> <img src="assets/chatgpt_logo.svg" alt="GPT" width="40" style="vertical-align:middle; margin-right:8px;"/>
+
+> **Disclaimer:** Esta aplicación ha sido construida con la ayuda de Vibe Coding, utilizando modelos de IA avanzados como Claude Sonnet (Anthropic) y GPT (OpenAI).
+
+---
+
 # PDF Combiner Pro
 
 **PDF Combiner Pro** es una herramienta profesional para combinar y fusionar archivos PDF con características avanzadas como generación automática de índices interactivos, extracción inteligente de títulos y una interfaz gráfica moderna.
