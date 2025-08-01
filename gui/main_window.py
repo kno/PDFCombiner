@@ -36,7 +36,6 @@ class PDFCombinerGUI(QMainWindow):
 
     def _init_ui(self):
         """Inicializar interfaz de usuario"""
-        self.setWindowTitle(AppConfig.WINDOW_TITLE)
         self.setGeometry(100, 100, *AppConfig.WINDOW_SIZE)
         self.setMinimumSize(*AppConfig.WINDOW_MIN_SIZE)
 
@@ -131,10 +130,10 @@ class PDFCombinerGUI(QMainWindow):
 
     def _show_success_message(self, result_path: str):
         """Mostrar mensaje de éxito"""
-        if self.create_index_checkbox.isChecked():
-            message = f"PDF combinado con índice interactivo guardado como:\\n{result_path}"
+        if self.file_manager_widget.create_index_checkbox.isChecked():
+            message = f"PDF combinado con índice interactivo guardado como:\n{result_path}"
         else:
-            message = f"PDF combinado guardado como:\\n{result_path}"
+            message = f"PDF combinado guardado como:\n{result_path}"
         QMessageBox.information(self, "Éxito", message)
 
     def _show_error_message(self, error_message: str):
@@ -153,7 +152,7 @@ class PDFCombinerGUI(QMainWindow):
 
     def _show_success_message(self, result_path: str):
         """Mostrar mensaje de éxito"""
-        if self.create_index_checkbox.isChecked():
+        if self.file_manager_widget.create_index_checkbox.isChecked():
             message = f"PDF combinado con índice interactivo guardado como:\\n{result_path}"
         else:
             message = f"PDF combinado guardado como:\\n{result_path}"
