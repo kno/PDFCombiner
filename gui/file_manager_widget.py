@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
     QTreeView, QListView, QLabel, QPushButton,
     QFrame, QHeaderView, QMessageBox, QFileDialog, QCheckBox
 )
+from gui.custom_list_view import CustomListView
 from PyQt6.QtCore import (
     Qt, QModelIndex, pyqtSignal,
     QDir, QSortFilterProxyModel, QTimer
@@ -17,26 +18,7 @@ from core.file_manager import FileManager, FileManagerError
 from utils.text_processor import TextProcessor
 from gui.styles import FileManagerStyles
 
-class CustomListView(QListView):
-    """ListView personalizado para detectar la posición real del drop"""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.actual_drop_row = -1
-
-    def dropEvent(self, event: QDropEvent):
-        """Capturar la posición real del drop"""
-        drop_index = self.indexAt(event.position().toPoint())
-        if drop_index.isValid():
-            self.actual_drop_row = drop_index.row()
-        else:
-            self.actual_drop_row = -1
-
-        # Pasar la información al modelo antes del drop
-        if hasattr(self.model(), 'set_actual_drop_row'):
-            self.model().set_actual_drop_row(self.actual_drop_row)
-
-        super().dropEvent(event)
+## CustomListView now imported from gui/custom_list_view.py
 
 class PDFFilterModel(QSortFilterProxyModel):
     """Modelo proxy para filtrar solo archivos PDF y directorios, con navegación hacia arriba integrada"""
