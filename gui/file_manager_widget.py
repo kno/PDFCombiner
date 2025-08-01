@@ -88,14 +88,6 @@ class PDFFilterModel(QSortFilterProxyModel):
         return True
 
 class SelectedFilesModel(QStandardItemModel):
-    def get_titles(self) -> List[str]:
-        """Obtener los títulos actuales (editados) de los archivos seleccionados"""
-        titles = []
-        for i in range(self.rowCount()):
-            item = self.item(i)
-            if item:
-                titles.append(item.text())
-        return titles
     """Modelo para archivos seleccionados - solo títulos con soporte drag and drop"""
 
     # Señal emitida cuando el orden de los archivos cambia
@@ -103,7 +95,7 @@ class SelectedFilesModel(QStandardItemModel):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.selected_files: List[str] = []
+        self.selected_files: List[dict] = []  # cada dict: {'path': str, 'title': str}
         # Variables para rastrear drag and drop
         self.drag_source_row = -1
         self.drag_file_path = None
@@ -208,14 +200,11 @@ class SelectedFilesModel(QStandardItemModel):
         self.clear()
 
         # Recrear items basado en el orden actual
-        for i, file_path in enumerate(self.selected_files):
-            path_obj = Path(file_path)
-            title = TextProcessor.extract_title(path_obj.name)
-
-            title_item = QStandardItem(title)
-            title_item.setData(file_path, Qt.ItemDataRole.UserRole)
+        for entry in self.selected_files:
+            title_item = QStandardItem(entry['title'])
+            title_item.setData(entry['path'], Qt.ItemDataRole.UserRole)
             title_item.setIcon(self._get_pdf_icon())
-
+            title_item.setEditable(True)
             self.appendRow(title_item)
 
     def _sync_selected_files_from_model(self):
@@ -238,10 +227,12 @@ class SelectedFilesModel(QStandardItemModel):
 
     def add_file(self, file_path: str) -> bool:
         """Agregar archivo a la selección"""
-        if file_path in self.selected_files:
+        if any(entry['path'] == file_path for entry in self.selected_files):
             return False
-
-        self.selected_files.append(file_path)
+        path_obj = Path(file_path)
+        title = TextProcessor.extract_title(path_obj.name)
+        entry = {'path': file_path, 'title': title}
+        self.selected_files.append(entry)
 
         # Crear elemento solo con título
         path_obj = Path(file_path)
@@ -269,14 +260,14 @@ class SelectedFilesModel(QStandardItemModel):
         if (0 <= from_row < len(self.selected_files) and
             0 <= to_row < len(self.selected_files) and
             from_row != to_row):
-
-            # Mover en la lista
-            file_path = self.selected_files.pop(from_row)
-            self.selected_files.insert(to_row, file_path)
-
-            # Mover en el modelo
-            items = self.takeRow(from_row)
-            self.insertRow(to_row, items)
+            # Guarda todos los títulos editados antes de mover
+            for i in range(self.rowCount()):
+                item = self.item(i)
+                if item:
+                    self.selected_files[i]['title'] = item.text()
+            entry = self.selected_files.pop(from_row)
+            self.selected_files.insert(to_row, entry)
+            self._rebuild_model()
             return True
         return False
 
@@ -287,7 +278,7 @@ class SelectedFilesModel(QStandardItemModel):
 
     def get_selected_files(self) -> List[str]:
         """Obtener lista de archivos seleccionados"""
-        return self.selected_files.copy()
+        return [entry['path'] for entry in self.selected_files]
 
     def _get_pdf_icon(self) -> QIcon:
         """Crear icono para archivos PDF"""
@@ -304,6 +295,19 @@ class SelectedFilesModel(QStandardItemModel):
         painter.end()
 
         return QIcon(pixmap)
+
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+        if role == Qt.ItemDataRole.EditRole and index.isValid():
+            row = index.row()
+            self.selected_files[row]['title'] = value
+        return super().setData(index, value, role)
+
+    def get_titles(self) -> List[str]:
+        for i in range(self.rowCount()):
+            item = self.item(i)
+            if item:
+                self.selected_files[i]['title'] = item.text()
+        return [entry['title'] for entry in self.selected_files]
 
 class FileManagerWidget(QWidget):
     def get_selected_titles(self) -> List[str]:
