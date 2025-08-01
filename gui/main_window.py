@@ -8,7 +8,6 @@ from PyQt6.QtWidgets import (QMainWindow, QVBoxLayout, QHBoxLayout,
                             QFileDialog, QWidget, QFrame, QListWidgetItem)
 from PyQt6.QtCore import Qt
 
-from .widgets import DragDropListWidget
 from .file_manager_widget import FileManagerWidget
 from .styles import StyleManager, ButtonStyle
 from core.file_manager import FileManager, FileManagerError, DirectoryEntry
@@ -64,14 +63,11 @@ class PDFCombinerGUI(QMainWindow):
         self.file_manager_widget.current_directory_changed.connect(self._on_directory_changed)
 
         # Conectar el botón de combinar del file manager widget
-        self.file_manager_widget.combine_button.clicked.connect(self._combine_pdfs)
+        self.file_manager_widget.combine_requested.connect(self._combine_pdfs)
 
     def _on_files_selected(self, files: List[str]):
         """Manejar cambio en archivos seleccionados"""
         self.selected_files = files.copy()
-
-        # Habilitar/deshabilitar botón de combinar
-        self.file_manager_widget.combine_button.setEnabled(len(self.selected_files) > 0)
 
     def _on_directory_changed(self, directory: str):
         """Manejar cambio de directorio"""
@@ -116,7 +112,7 @@ class PDFCombinerGUI(QMainWindow):
             result = self.pdf_service.combine(
                 files=self.selected_files,
                 output_path=output_file,
-                create_index=self.file_manager_widget.create_index_checkbox.isChecked(),
+                create_index=self.file_manager_widget.is_create_index_checked(),
                 titles=edited_titles
             )
             self._show_success_message(result)
@@ -137,32 +133,10 @@ class PDFCombinerGUI(QMainWindow):
 
     def _show_success_message(self, result_path: str):
         """Mostrar mensaje de éxito"""
-        if self.file_manager_widget.create_index_checkbox.isChecked():
+        if self.file_manager_widget.is_create_index_checked():
             message = f"PDF combinado con índice interactivo guardado como:\n{result_path}"
         else:
             message = f"PDF combinado guardado como:\n{result_path}"
-        QMessageBox.information(self, "Éxito", message)
-
-    def _show_error_message(self, error_message: str):
-        """Mostrar mensaje de error"""
-        QMessageBox.critical(self, "Error", error_message)
-
-    def _get_output_file(self) -> str:
-        """Obtener archivo de salida"""
-        output_file, _ = QFileDialog.getSaveFileName(
-            self,
-            "Guardar PDF combinado",
-            AppConfig.DEFAULT_OUTPUT_NAME,
-            "PDF files (*.pdf)"
-        )
-        return output_file
-
-    def _show_success_message(self, result_path: str):
-        """Mostrar mensaje de éxito"""
-        if self.file_manager_widget.create_index_checkbox.isChecked():
-            message = f"PDF combinado con índice interactivo guardado como:\\n{result_path}"
-        else:
-            message = f"PDF combinado guardado como:\\n{result_path}"
         QMessageBox.information(self, "Éxito", message)
 
     def _show_error_message(self, error_message: str):
