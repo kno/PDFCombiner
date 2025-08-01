@@ -45,13 +45,33 @@ class PDFFilterModel(QSortFilterProxyModel):
         super().__init__(parent)
         self.setRecursiveFilteringEnabled(True)
         self.file_manager = None
+        self.regex_filter = None
+
+    def set_wildcard_filter(self, wildcard_str):
+        """Convierte el patrón de wildcard a regex y lo compila"""
+        import re
+        # Escapar todos los caracteres regex excepto * y +
+        def escape_except_wildcards(s):
+            # Primero, reemplazar * y + por marcadores temporales
+            s = s.replace('*', '__WILDCARD_STAR__').replace('+', '__WILDCARD_PLUS__')
+            # Escapar todo lo demás
+            s = re.escape(s)
+            # Restaurar los wildcards
+            s = s.replace('__WILDCARD_STAR__', '.*').replace('__WILDCARD_PLUS__', '.')
+            return s
+
+        pattern = escape_except_wildcards(wildcard_str)
+        try:
+            self.regex_filter = re.compile(pattern, re.IGNORECASE)
+        except Exception:
+            self.regex_filter = None
 
     def set_file_manager(self, file_manager):
         """Configurar referencia al file manager para navegación"""
         self.file_manager = file_manager
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
-        """Filtrar solo directorios y archivos PDF"""
+        """Filtrar solo directorios y archivos PDF, y aplicar filtro regex si existe"""
         source_model = self.sourceModel()
         index = source_model.index(source_row, 0, source_parent)
 
@@ -59,7 +79,13 @@ class PDFFilterModel(QSortFilterProxyModel):
             return True
 
         filename = source_model.fileName(index)
-        return filename.lower().endswith('.pdf')
+        if not filename.lower().endswith('.pdf'):
+            return False
+
+        # Si hay filtro regex, aplicarlo sobre el nombre de archivo
+        if self.regex_filter:
+            return bool(self.regex_filter.search(filename))
+        return True
 
 class SelectedFilesModel(QStandardItemModel):
     """Modelo para archivos seleccionados - solo títulos con soporte drag and drop"""
@@ -386,6 +412,14 @@ class FileManagerWidget(QWidget):
         title_label.setStyleSheet(FileManagerStyles.SECTION_TITLE)
         layout.addWidget(title_label)
 
+        # Caja de texto para filtro rápido (regex)
+        from PyQt6.QtWidgets import QLineEdit
+        self.filter_line_edit = QLineEdit()
+        self.filter_line_edit.setPlaceholderText("Filtrar por expresión regular...")
+        self.filter_line_edit.setClearButtonEnabled(True)
+        self.filter_line_edit.setMinimumHeight(28)
+        layout.addWidget(self.filter_line_edit)
+
         # Botón de subir directorio (aparece cuando es necesario)
         self.parent_dir_button = QPushButton("📁 ⬆️ Directorio superior")
         self.parent_dir_button.setStyleSheet(FileManagerStyles.PARENT_DIR_BUTTON)
@@ -504,6 +538,9 @@ class FileManagerWidget(QWidget):
         # Navegación con botón de directorio superior
         self.parent_dir_button.clicked.connect(self._navigate_to_parent)
 
+        # Filtro rápido: actualizar el modelo proxy al cambiar el texto (wildcards)
+        self.filter_line_edit.textChanged.connect(self._on_filter_text_changed)
+
         # Selección en vista de archivos
         self.tree_view.selectionModel().selectionChanged.connect(self._on_file_selection_changed)
 
@@ -526,6 +563,11 @@ class FileManagerWidget(QWidget):
         self.move_down_button.clicked.connect(self._move_selected_down)
         self.remove_button.clicked.connect(self._remove_selected_files)
         self.clear_button.clicked.connect(self._clear_selected_files)
+
+    def _on_filter_text_changed(self, text):
+        """Actualizar el filtro wildcard del modelo proxy"""
+        self.filter_model.set_wildcard_filter(text)
+        self.filter_model.invalidateFilter()
 
     def _update_current_directory(self):
         """Actualizar información del directorio actual"""
