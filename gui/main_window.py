@@ -94,7 +94,10 @@ class PDFCombinerGUI(QMainWindow):
         return True
 
     def _combine_pdfs(self):
-        """Combinar PDFs - lógica simplificada"""
+        """Combinar PDFs usando los títulos editados del listado"""
+        # Sincronizar la lista de archivos seleccionados directamente del widget
+        self.selected_files = self.file_manager_widget.get_selected_files()
+
         if not self._validate_selection():
             return
 
@@ -106,11 +109,15 @@ class PDFCombinerGUI(QMainWindow):
             QMessageBox.critical(self, "Error", "Servicio PDF no disponible")
             return
 
+        # Obtener los títulos editados del listado
+        edited_titles = self.file_manager_widget.get_selected_titles()
+
         try:
             result = self.pdf_service.combine(
                 files=self.selected_files,
                 output_path=output_file,
-                create_index=self.file_manager_widget.create_index_checkbox.isChecked()
+                create_index=self.file_manager_widget.create_index_checkbox.isChecked(),
+                titles=edited_titles
             )
             self._show_success_message(result)
         except PDFCombinerError as e:

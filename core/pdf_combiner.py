@@ -22,7 +22,7 @@ class PDFCombinerService:
         if AdvancedPDFCombiner is None:
             raise PDFCombinerError("No se pudo cargar el combinador de PDFs")
 
-    def combine(self, files: List[str], output_path: str, create_index: bool = True) -> str:
+    def combine(self, files: List[str], output_path: str, create_index: bool = True, titles: List[str] = None) -> str:
         """
         Combinar archivos PDF
 
@@ -41,8 +41,10 @@ class PDFCombinerService:
             raise PDFCombinerError("No hay archivos para combinar")
 
         try:
-            # Generar títulos automáticamente
-            titles = [TextProcessor.extract_title(f) for f in files]
+            import os
+            # Usar títulos editados si se proporcionan, si no, extraerlos automáticamente
+            if titles is None:
+                titles = [TextProcessor.extract_title(os.path.basename(f)) for f in files]
 
             # Crear combinador
             combiner = AdvancedPDFCombiner(files, titles)

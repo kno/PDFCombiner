@@ -88,6 +88,14 @@ class PDFFilterModel(QSortFilterProxyModel):
         return True
 
 class SelectedFilesModel(QStandardItemModel):
+    def get_titles(self) -> List[str]:
+        """Obtener los títulos actuales (editados) de los archivos seleccionados"""
+        titles = []
+        for i in range(self.rowCount()):
+            item = self.item(i)
+            if item:
+                titles.append(item.text())
+        return titles
     """Modelo para archivos seleccionados - solo títulos con soporte drag and drop"""
 
     # Señal emitida cuando el orden de los archivos cambia
@@ -298,6 +306,9 @@ class SelectedFilesModel(QStandardItemModel):
         return QIcon(pixmap)
 
 class FileManagerWidget(QWidget):
+    def get_selected_titles(self) -> List[str]:
+        """Obtener los títulos editados de los archivos seleccionados"""
+        return self.selected_model.get_titles()
     """Widget completo de gestión de archivos con vistas múltiples"""
 
     # Señales

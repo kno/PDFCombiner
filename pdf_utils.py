@@ -115,16 +115,9 @@ class IndexGenerator:
 
         # Header
         c.setFont("Helvetica-Bold", 20)
-        title = "📋 INTERACTIVE INDEX"
+        title = "📋 Índice"
         c.drawString((width - c.stringWidth(title, "Helvetica-Bold", 20)) / 2,
                     height - 70, title)
-
-        # Instructions
-        c.setFont("Helvetica", 11)
-        instruction = "Click any title to jump to that section"
-        c.setFillColor(colors.darkblue)
-        c.drawString((width - c.stringWidth(instruction, "Helvetica", 11)) / 2,
-                    height - 95, instruction)
 
         # Index entries
         c.setFont("Helvetica", 13)
