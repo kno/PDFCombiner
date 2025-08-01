@@ -40,7 +40,8 @@ ACCENT_CORRECTIONS = {
     'da': 'día', 'ano': 'año', 'nino': 'niño', 'nina': 'niña',
     'manana': 'mañana', 'espanol': 'español', 'informacion': 'información',
     'evaluacion': 'evaluación', 'presentacion': 'presentación',
-    'documentacion': 'documentación'
+    'documentacion': 'documentación', 'pagina': 'página', 'anlisis': 'análisis',
+    'disea': 'diseña', 'deteccion': 'detección'
 }
 
 
