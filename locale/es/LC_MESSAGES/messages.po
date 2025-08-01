@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-08-01 09:00+0200\n"
+"POT-Creation-Date: 2025-08-01 10:57+0200\n"
 "PO-Revision-Date: 2025-08-01 09:00+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -18,45 +18,45 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
-#: gui/main_window.py:38 gui/main_window.py:50
+#: gui/main_window.py:29 gui/main_window.py:41
 msgid "PDF Combiner Pro"
 msgstr "PDF Combiner Pro"
 
-#: gui/main_window.py:45 gui/main_window.py:118 gui/main_window.py:157
+#: gui/main_window.py:36 gui/main_window.py:109 gui/main_window.py:148
 msgid "Error"
 msgstr "Error"
 
-#: gui/main_window.py:45
+#: gui/main_window.py:36
 #, python-brace-format
 msgid "Error al inicializar servicio PDF: {}"
 msgstr "Error al inicializar servicio PDF: {}"
 
-#: gui/main_window.py:101
+#: gui/main_window.py:92
 msgid "Advertencia"
 msgstr "Advertencia"
 
-#: gui/main_window.py:101
+#: gui/main_window.py:92
 msgid "No hay ficheros seleccionados."
 msgstr "No hay ficheros seleccionados."
 
-#: gui/main_window.py:118
+#: gui/main_window.py:109
 msgid "Servicio PDF no disponible"
 msgstr "Servicio PDF no disponible"
 
-#: gui/main_window.py:135
+#: gui/main_window.py:126
 #, python-brace-format
 msgid "Error inesperado: {}"
 msgstr "Error inesperado: {}"
 
-#: gui/main_window.py:141
+#: gui/main_window.py:132
 msgid "Guardar PDF combinado"
 msgstr "Guardar PDF combinado"
 
-#: gui/main_window.py:143
+#: gui/main_window.py:134
 msgid "PDF files (*.pdf)"
 msgstr "Ficheros PDF (*.pdf)"
 
-#: gui/main_window.py:150
+#: gui/main_window.py:141
 #, python-brace-format
 msgid ""
 "PDF combinado con índice interactivo guardado como:\n"
@@ -65,7 +65,7 @@ msgstr ""
 "PDF combinado con índice interactivo guardado como:\n"
 "{}"
 
-#: gui/main_window.py:152
+#: gui/main_window.py:143
 #, python-brace-format
 msgid ""
 "PDF combinado guardado como:\n"
@@ -74,11 +74,67 @@ msgstr ""
 "PDF combinado guardado como:\n"
 "{}"
 
-#: gui/main_window.py:153
+#: gui/main_window.py:144
 msgid "Éxito"
 msgstr "Éxito"
 
-#: gui/widgets.py:130
+#: gui/widgets.py:121
 #, python-brace-format
 msgid "📄 {}"
 msgstr "📄 {}"
+
+#: gui/widgets/controls_widget.py:35
+msgid "Crear índice interactivo"
+msgstr ""
+
+#: gui/widgets/controls_widget.py:46
+#, fuzzy
+msgid "🔗 Combinar PDFs"
+msgstr "PDF Combiner Pro"
+
+#: gui/widgets/file_explorer_widget.py:42
+msgid "Explorador de Archivos"
+msgstr ""
+
+#: gui/widgets/file_explorer_widget.py:48
+msgid "Filtrar por expresión regular..."
+msgstr ""
+
+#: gui/widgets/file_explorer_widget.py:54
+msgid "📁 ⬆️ Directorio superior"
+msgstr ""
+
+#: gui/widgets/file_explorer_widget.py:66
+msgid "→ Agregar"
+msgstr ""
+
+#: gui/widgets/header_widget.py:25
+msgid "Gestor de Archivos PDF"
+msgstr ""
+
+#: gui/widgets/header_widget.py:57
+#, fuzzy, python-brace-format
+msgid "📁 {}"
+msgstr "📄 {}"
+
+#: gui/widgets/selected_files_widget.py:39
+#, fuzzy
+msgid "Archivos Seleccionados"
+msgstr "No hay ficheros seleccionados."
+
+#: gui/widgets/selected_files_widget.py:61
+msgid "↑ Subir"
+msgstr ""
+
+#: gui/widgets/selected_files_widget.py:62
+msgid "↓ Bajar"
+msgstr ""
+
+#: gui/widgets/selected_files_widget.py:63
+msgid "✕ Eliminar"
+msgstr ""
+
+#: gui/widgets/selected_files_widget.py:64
+msgid "🗑 Limpiar Todo"
+msgstr ""
+

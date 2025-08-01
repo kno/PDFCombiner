@@ -13,6 +13,7 @@
 ## 🚀 Características Principales
 
 - **Interfaz Gráfica Moderna**: Diseño con tema oscuro y controles intuitivos
+- **Soporte Multiidioma**: Interface disponible en Español e Inglés
 - **Combinación Inteligente**: Fusiona múltiples PDFs manteniendo la calidad original
 - **Índice Interactivo**: Genera automáticamente un índice con enlaces clickeables
 - **Explorador de Archivos Integrado**: Navega y selecciona archivos fácilmente
@@ -77,6 +78,30 @@ python main.py
 ```
 
 ## 🎯 Uso del Programa
+
+### 🌍 Selección de Idioma
+
+La aplicación soporta múltiples idiomas y se adapta automáticamente según la configuración de tu sistema:
+
+**Idiomas disponibles:**
+- 🇪🇸 **Español** (por defecto)
+- 🇺🇸 **English**
+
+**Para cambiar el idioma manualmente:**
+
+```bash
+# Ejecutar en Español
+LANG=es_ES.UTF-8 python main.py
+
+# Ejecutar en Inglés
+LANG=en_US.UTF-8 python main.py
+```
+
+**Script de prueba incluido:**
+```bash
+# Probar todos los idiomas automáticamente
+python test_languages.py
+```
 
 ### Interfaz Gráfica (Recomendado)
 

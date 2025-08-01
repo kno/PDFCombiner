@@ -1,7 +1,6 @@
 """
 Widget explorador de archivos
 """
-import gettext
 from typing import List, Set
 from pathlib import Path
 from PyQt6.QtWidgets import (
@@ -13,15 +12,7 @@ from PyQt6.QtGui import QFileSystemModel
 from gui.pdf_filter_model import PDFFilterModel
 from core.file_manager import FileManager
 from gui.styles import FileManagerStyles
-
-# Setup for localization
-try:
-    es = gettext.translation('messages', localedir='locale', languages=['es'])
-    es.install()
-    _ = es.gettext
-except FileNotFoundError:
-    # Fallback if translation file is not found
-    _ = gettext.gettext
+from utils.localization import _
 
 
 class FileExplorerWidget(QWidget):

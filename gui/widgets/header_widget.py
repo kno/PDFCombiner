@@ -1,19 +1,10 @@
 """
 Widget de cabecera con título y directorio actual
 """
-import gettext
 from pathlib import Path
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QFrame
 from gui.styles import FileManagerStyles
-
-# Setup for localization
-try:
-    es = gettext.translation('messages', localedir='locale', languages=['es'])
-    es.install()
-    _ = es.gettext
-except FileNotFoundError:
-    # Fallback if translation file is not found
-    _ = gettext.gettext
+from utils.localization import _
 
 
 class HeaderWidget(QWidget):

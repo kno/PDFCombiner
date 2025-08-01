@@ -1,21 +1,12 @@
 """
 Widgets personalizados para la aplicación
 """
-import gettext
 from typing import Dict, Set, List
 from PyQt6.QtWidgets import QListWidget, QListWidgetItem
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPainter, QColor
 from config.settings import AppConfig
-
-# Setup for localization
-try:
-    es = gettext.translation('messages', localedir='locale', languages=['es'])
-    es.install()
-    _ = es.gettext
-except FileNotFoundError:
-    # Fallback if translation file is not found
-    _ = gettext.gettext
+from utils.localization import _
 
 class MarkedListWidget(QListWidget):
     """Lista con capacidad de marcado visual"""

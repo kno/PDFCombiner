@@ -1,22 +1,13 @@
 """
 Widget de controles inferiores
 """
-import gettext
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QCheckBox, QPushButton,
     QFrame
 )
 from PyQt6.QtCore import pyqtSignal
 from gui.styles import FileManagerStyles
-
-# Setup for localization
-try:
-    es = gettext.translation('messages', localedir='locale', languages=['es'])
-    es.install()
-    _ = es.gettext
-except FileNotFoundError:
-    # Fallback if translation file is not found
-    _ = gettext.gettext
+from utils.localization import _
 
 
 class ControlsWidget(QWidget):

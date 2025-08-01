@@ -1,7 +1,6 @@
 """
 Widget de archivos seleccionados
 """
-import gettext
 from typing import List, Set
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QListView, QLabel, QPushButton,
@@ -11,15 +10,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from gui.custom_list_view import CustomListView
 from gui.selected_files_model import SelectedFilesModel
 from gui.styles import FileManagerStyles
-
-# Setup for localization
-try:
-    es = gettext.translation('messages', localedir='locale', languages=['es'])
-    es.install()
-    _ = es.gettext
-except FileNotFoundError:
-    # Fallback if translation file is not found
-    _ = gettext.gettext
+from utils.localization import _
 
 
 class SelectedFilesWidget(QWidget):

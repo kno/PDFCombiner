@@ -1,7 +1,6 @@
 """
 Ventana principal de la aplicación
 """
-import gettext
 from typing import List, Dict
 from pathlib import Path
 from PyQt6.QtWidgets import (QMainWindow, QVBoxLayout, QHBoxLayout,
@@ -15,15 +14,7 @@ from core.file_manager import FileManager, FileManagerError, DirectoryEntry
 from core.pdf_combiner import PDFCombinerService, PDFCombinerError
 from utils.text_processor import TextProcessor
 from config.settings import AppConfig
-
-# Setup for localization
-try:
-    es = gettext.translation('messages', localedir='locale', languages=['es'])
-    es.install()
-    _ = es.gettext
-except FileNotFoundError:
-    # Fallback if translation file is not found
-    _ = gettext.gettext
+from utils.localization import _
 
 
 class PDFCombinerGUI(QMainWindow):
