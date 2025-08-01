@@ -1,9 +1,19 @@
 """
 Widget de cabecera con título y directorio actual
 """
+import gettext
 from pathlib import Path
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QFrame
 from gui.styles import FileManagerStyles
+
+# Setup for localization
+try:
+    es = gettext.translation('messages', localedir='locale', languages=['es'])
+    es.install()
+    _ = es.gettext
+except FileNotFoundError:
+    # Fallback if translation file is not found
+    _ = gettext.gettext
 
 
 class HeaderWidget(QWidget):
@@ -21,7 +31,7 @@ class HeaderWidget(QWidget):
         header_layout = QVBoxLayout(header_frame)
 
         # Título
-        title_label = QLabel("Gestor de Archivos PDF")
+        title_label = QLabel(_("Gestor de Archivos PDF"))
         title_label.setStyleSheet(FileManagerStyles.SECTION_TITLE_LARGE)
         header_layout.addWidget(title_label)
 
@@ -53,4 +63,4 @@ class HeaderWidget(QWidget):
         except:
             display_path = current_path
 
-        self.current_dir_label.setText(f"📁 {display_path}")
+        self.current_dir_label.setText(_("📁 {}").format(display_path))

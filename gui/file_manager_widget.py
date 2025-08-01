@@ -1,11 +1,22 @@
 """
 Widget de gestión de archivos refactorizado usando widgets especializados
 """
+import gettext
 from typing import List, Set
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QSplitter
 from PyQt6.QtCore import Qt, pyqtSignal
 from core.file_manager import FileManager
 from gui.widgets import HeaderWidget, FileExplorerWidget, SelectedFilesWidget, ControlsWidget
+
+# Setup for localization
+try:
+    es = gettext.translation('messages', localedir='locale', languages=['es'])
+    es.install()
+    _ = es.gettext
+except FileNotFoundError:
+    # Fallback if translation file is not found
+    _ = gettext.gettext
+
 
 class FileManagerWidget(QWidget):
     """Widget completo de gestión de archivos con widgets especializados"""

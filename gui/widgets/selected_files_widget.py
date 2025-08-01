@@ -1,6 +1,7 @@
 """
 Widget de archivos seleccionados
 """
+import gettext
 from typing import List, Set
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QListView, QLabel, QPushButton,
@@ -10,6 +11,15 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from gui.custom_list_view import CustomListView
 from gui.selected_files_model import SelectedFilesModel
 from gui.styles import FileManagerStyles
+
+# Setup for localization
+try:
+    es = gettext.translation('messages', localedir='locale', languages=['es'])
+    es.install()
+    _ = es.gettext
+except FileNotFoundError:
+    # Fallback if translation file is not found
+    _ = gettext.gettext
 
 
 class SelectedFilesWidget(QWidget):
@@ -35,7 +45,7 @@ class SelectedFilesWidget(QWidget):
         layout = QVBoxLayout(panel)
 
         # Título del panel
-        title_label = QLabel("Archivos Seleccionados")
+        title_label = QLabel(_("Archivos Seleccionados"))
         title_label.setStyleSheet(FileManagerStyles.SECTION_TITLE)
         layout.addWidget(title_label)
 
@@ -57,10 +67,10 @@ class SelectedFilesWidget(QWidget):
         # Botones de control
         buttons_layout = QHBoxLayout()
 
-        self.move_up_button = QPushButton("↑ Subir")
-        self.move_down_button = QPushButton("↓ Bajar")
-        self.remove_button = QPushButton("✕ Eliminar")
-        self.clear_button = QPushButton("🗑 Limpiar Todo")
+        self.move_up_button = QPushButton(_("↑ Subir"))
+        self.move_down_button = QPushButton(_("↓ Bajar"))
+        self.remove_button = QPushButton(_("✕ Eliminar"))
+        self.clear_button = QPushButton(_("🗑 Limpiar Todo"))
 
         # Estilos para botones
         for button in [self.move_up_button, self.move_down_button, self.remove_button, self.clear_button]:

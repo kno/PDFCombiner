@@ -1,6 +1,7 @@
 """
 Widget explorador de archivos
 """
+import gettext
 from typing import List, Set
 from pathlib import Path
 from PyQt6.QtWidgets import (
@@ -12,6 +13,15 @@ from PyQt6.QtGui import QFileSystemModel
 from gui.pdf_filter_model import PDFFilterModel
 from core.file_manager import FileManager
 from gui.styles import FileManagerStyles
+
+# Setup for localization
+try:
+    es = gettext.translation('messages', localedir='locale', languages=['es'])
+    es.install()
+    _ = es.gettext
+except FileNotFoundError:
+    # Fallback if translation file is not found
+    _ = gettext.gettext
 
 
 class FileExplorerWidget(QWidget):
@@ -38,19 +48,19 @@ class FileExplorerWidget(QWidget):
         layout = QVBoxLayout(panel)
 
         # Título del panel
-        title_label = QLabel("Explorador de Archivos")
+        title_label = QLabel(_("Explorador de Archivos"))
         title_label.setStyleSheet(FileManagerStyles.SECTION_TITLE)
         layout.addWidget(title_label)
 
         # Caja de texto para filtro rápido (regex)
         self.filter_line_edit = QLineEdit()
-        self.filter_line_edit.setPlaceholderText("Filtrar por expresión regular...")
+        self.filter_line_edit.setPlaceholderText(_("Filtrar por expresión regular..."))
         self.filter_line_edit.setClearButtonEnabled(True)
         self.filter_line_edit.setMinimumHeight(28)
         layout.addWidget(self.filter_line_edit)
 
         # Botón de subir directorio (aparece cuando es necesario)
-        self.parent_dir_button = QPushButton("📁 ⬆️ Directorio superior")
+        self.parent_dir_button = QPushButton(_("📁 ⬆️ Directorio superior"))
         self.parent_dir_button.setStyleSheet(FileManagerStyles.PARENT_DIR_BUTTON)
         self.parent_dir_button.setVisible(False)  # Inicialmente oculto
         layout.addWidget(self.parent_dir_button)
@@ -62,7 +72,7 @@ class FileExplorerWidget(QWidget):
 
         # Botón de agregar
         buttons_layout = QHBoxLayout()
-        self.add_button = QPushButton("→ Agregar")
+        self.add_button = QPushButton(_("→ Agregar"))
         self.add_button.setStyleSheet(FileManagerStyles.ADD_BUTTON)
         self.add_button.setEnabled(False)
         buttons_layout.addStretch()

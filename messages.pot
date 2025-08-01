@@ -1,0 +1,80 @@
+# Translations template for PROJECT.
+# Copyright (C) 2025 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2025-08-01 09:00+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#: gui/main_window.py:38 gui/main_window.py:50
+msgid "PDF Combiner Pro"
+msgstr ""
+
+#: gui/main_window.py:45 gui/main_window.py:118 gui/main_window.py:157
+msgid "Error"
+msgstr ""
+
+#: gui/main_window.py:45
+#, python-brace-format
+msgid "Error al inicializar servicio PDF: {}"
+msgstr ""
+
+#: gui/main_window.py:101
+msgid "Advertencia"
+msgstr ""
+
+#: gui/main_window.py:101
+msgid "No hay ficheros seleccionados."
+msgstr ""
+
+#: gui/main_window.py:118
+msgid "Servicio PDF no disponible"
+msgstr ""
+
+#: gui/main_window.py:135
+#, python-brace-format
+msgid "Error inesperado: {}"
+msgstr ""
+
+#: gui/main_window.py:141
+msgid "Guardar PDF combinado"
+msgstr ""
+
+#: gui/main_window.py:143
+msgid "PDF files (*.pdf)"
+msgstr ""
+
+#: gui/main_window.py:150
+#, python-brace-format
+msgid ""
+"PDF combinado con índice interactivo guardado como:\n"
+"{}"
+msgstr ""
+
+#: gui/main_window.py:152
+#, python-brace-format
+msgid ""
+"PDF combinado guardado como:\n"
+"{}"
+msgstr ""
+
+#: gui/main_window.py:153
+msgid "Éxito"
+msgstr ""
+
+#: gui/widgets.py:130
+#, python-brace-format
+msgid "📄 {}"
+msgstr ""
+

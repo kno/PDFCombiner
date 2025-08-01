@@ -1,12 +1,22 @@
 """
 Widget de controles inferiores
 """
+import gettext
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QCheckBox, QPushButton,
     QFrame
 )
 from PyQt6.QtCore import pyqtSignal
 from gui.styles import FileManagerStyles
+
+# Setup for localization
+try:
+    es = gettext.translation('messages', localedir='locale', languages=['es'])
+    es.install()
+    _ = es.gettext
+except FileNotFoundError:
+    # Fallback if translation file is not found
+    _ = gettext.gettext
 
 
 class ControlsWidget(QWidget):
@@ -31,7 +41,7 @@ class ControlsWidget(QWidget):
         controls_layout.addStretch()
 
         # Checkbox para crear índice interactivo
-        self.create_index_checkbox = QCheckBox("Crear índice interactivo")
+        self.create_index_checkbox = QCheckBox(_("Crear índice interactivo"))
         self.create_index_checkbox.setChecked(True)
         self.create_index_checkbox.setStyleSheet(FileManagerStyles.CREATE_INDEX_CHECKBOX)
         # Asegurar que el checkbox tenga suficiente espacio
@@ -42,7 +52,7 @@ class ControlsWidget(QWidget):
         controls_layout.addSpacing(20)
 
         # Botón combinar
-        self.combine_button = QPushButton("🔗 Combinar PDFs")
+        self.combine_button = QPushButton(_("🔗 Combinar PDFs"))
         self.combine_button.setMinimumHeight(40)
         self.combine_button.setEnabled(False)  # Inicialmente deshabilitado
         self.combine_button.setStyleSheet(FileManagerStyles.COMBINE_BUTTON)
