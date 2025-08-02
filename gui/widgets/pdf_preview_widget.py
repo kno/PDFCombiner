@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QScrollArea, QFrame,
-    QHBoxLayout, QPushButton, QSpinBox
+    QHBoxLayout, QPushButton, QLineEdit
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QThread, pyqtSlot
 from PyQt6.QtGui import QPixmap, QPainter, QImage
@@ -116,11 +116,13 @@ class PDFPreviewWidget(QWidget):
         controls_layout.addWidget(self.prev_button)
 
         # Selector de página
-        self.page_spinbox = QSpinBox()
-        self.page_spinbox.setMinimum(1)
-        self.page_spinbox.setMaximum(1)
-        self.page_spinbox.setEnabled(False)
-        controls_layout.addWidget(self.page_spinbox)
+        self.page_text = QLineEdit()
+        self.page_text.setPlaceholderText("Página")
+        self.page_text.setMaximumWidth(50)
+        self.page_text.setMinimumWidth(50)
+        self.page_text.setMinimumHeight(28)
+        self.page_text.setEnabled(False)
+        controls_layout.addWidget(self.page_text)
 
         # Etiqueta de total de páginas
         self.total_pages_label = QLabel("/ 0")
@@ -179,7 +181,7 @@ class PDFPreviewWidget(QWidget):
         """Configurar conexiones de señales"""
         self.prev_button.clicked.connect(self._go_to_previous_page)
         self.next_button.clicked.connect(self._go_to_next_page)
-        self.page_spinbox.valueChanged.connect(self._on_page_changed)
+        self.page_text.textChanged.connect(self._on_page_changed)
         self.zoom_in_button.clicked.connect(self._zoom_in)
         self.zoom_out_button.clicked.connect(self._zoom_out)
 
@@ -203,9 +205,8 @@ class PDFPreviewWidget(QWidget):
             doc.close()
 
             # Actualizar controles
-            self.page_spinbox.setMaximum(self.total_pages)
-            self.page_spinbox.setValue(1)
-            self.page_spinbox.setEnabled(True)
+            self.page_text.setText("1")
+            self.page_text.setEnabled(True)
             self.total_pages_label.setText(f"/ {self.total_pages}")
 
             # Habilitar botones
@@ -236,8 +237,8 @@ class PDFPreviewWidget(QWidget):
         self.image_label.setText(_("Selecciona un archivo PDF para previsualizar"))
 
         # Deshabilitar controles
-        self.page_spinbox.setEnabled(False)
-        self.page_spinbox.setValue(1)
+        self.page_text.setEnabled(False)
+        self.page_text.setText("1")
         self.total_pages_label.setText("/ 0")
         self.prev_button.setEnabled(False)
         self.next_button.setEnabled(False)
@@ -267,17 +268,17 @@ class PDFPreviewWidget(QWidget):
         """Ir a la página anterior"""
         if self.current_page > 0:
             self.current_page -= 1
-            self.page_spinbox.setValue(self.current_page + 1)
+            self.page_text.setText(str(self.current_page + 1))
 
     def _go_to_next_page(self):
         """Ir a la página siguiente"""
         if self.current_page < self.total_pages - 1:
             self.current_page += 1
-            self.page_spinbox.setValue(self.current_page + 1)
+            self.page_text.setText(str(self.current_page + 1))
 
-    def _on_page_changed(self, value: int):
+    def _on_page_changed(self, value: str):
         """Manejar cambio de página desde spinbox"""
-        self.current_page = value - 1
+        self.current_page = int(value) - 1
         self._update_navigation_buttons()
         self._render_current_page()
 
