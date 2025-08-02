@@ -18,6 +18,7 @@
 - **Intelligent Combining**: Merges multiple PDFs while maintaining original quality
 - **Interactive Index**: Automatically generates an index with clickable links
 - **Integrated File Explorer**: Navigate and select files easily
+- **PDF Preview**: Preview PDF files before combining them
 - **Drag & Drop**: Drag and drop files directly into the application
 - **Title Extraction**: Automatically recognizes titles from file names
 - **Accent Correction**: Automatically corrects special characters

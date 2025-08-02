@@ -19,6 +19,7 @@
 - **Combinación Inteligente**: Fusiona múltiples PDFs manteniendo la calidad original
 - **Índice Interactivo**: Genera automáticamente un índice con enlaces clickeables
 - **Explorador de Archivos Integrado**: Navega y selecciona archivos fácilmente
+- **Vista Previa de PDFs**: Previsualiza archivos PDF antes de combinarlos
 - **Drag & Drop**: Arrastra y suelta archivos directamente en la aplicación
 - **Extracción de Títulos**: Reconoce automáticamente títulos desde nombres de archivos
 - **Corrección de Acentos**: Corrige automáticamente caracteres especiales

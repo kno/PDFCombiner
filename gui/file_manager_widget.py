@@ -5,13 +5,7 @@ from typing import List, Set
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QSplitter
 from PyQt6.QtCore import Qt, pyqtSignal
 from core.file_manager import FileManager
-from gui.widgets import HeaderWidget, FileExplorerWidget, SelectedFilesWidget, ControlsWidget
-from utils.localization import _
-from typing import List, Set
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QSplitter
-from PyQt6.QtCore import Qt, pyqtSignal
-from core.file_manager import FileManager
-from gui.widgets import HeaderWidget, FileExplorerWidget, SelectedFilesWidget, ControlsWidget
+from gui.widgets import HeaderWidget, FileExplorerWidget, SelectedFilesWidget, ControlsWidget, PDFPreviewWidget
 from utils.localization import _
 
 class FileManagerWidget(QWidget):
@@ -39,24 +33,38 @@ class FileManagerWidget(QWidget):
         self.header_widget = HeaderWidget()
         layout.addWidget(self.header_widget)
 
-        # Splitter principal con ambas listas (expandible)
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        layout.addWidget(splitter, 1)  # stretch factor = 1, se expande
+        # Splitter principal horizontal con tres paneles
+        main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        layout.addWidget(main_splitter, 1)  # stretch factor = 1, se expande
+
+        # Splitter izquierdo para explorador y archivos seleccionados
+        left_splitter = QSplitter(Qt.Orientation.Horizontal)
+        main_splitter.addWidget(left_splitter)
 
         # Panel izquierdo: navegación por directorios
         self.file_explorer = FileExplorerWidget(self.file_manager)
-        splitter.addWidget(self.file_explorer)
+        left_splitter.addWidget(self.file_explorer)
 
-        # Panel derecho: archivos seleccionados
+        # Panel central: archivos seleccionados
         self.selected_files = SelectedFilesWidget()
-        splitter.addWidget(self.selected_files)
+        left_splitter.addWidget(self.selected_files)
 
-        # Configurar proporciones del splitter - ambos paneles iguales
-        splitter.setStretchFactor(0, 1)
-        splitter.setStretchFactor(1, 1)
-        splitter.setSizes([400, 400])
+        # Panel derecho: vista previa de PDF
+        self.pdf_preview = PDFPreviewWidget()
+        main_splitter.addWidget(self.pdf_preview)
 
-        # Sección de controles debajo de ambas listas (altura fija)
+        # Configurar proporciones del splitter principal
+        # Explorador + Seleccionados: 60%, Vista previa: 40%
+        main_splitter.setStretchFactor(0, 3)  # Panel izquierdo (explorador + seleccionados)
+        main_splitter.setStretchFactor(1, 2)  # Panel derecho (vista previa)
+        main_splitter.setSizes([600, 400])
+
+        # Configurar proporciones del splitter izquierdo
+        left_splitter.setStretchFactor(0, 1)  # Explorador
+        left_splitter.setStretchFactor(1, 1)  # Archivos seleccionados
+        left_splitter.setSizes([300, 300])
+
+        # Sección de controles debajo de todo (altura fija)
         self.controls_widget = ControlsWidget()
         layout.addWidget(self.controls_widget)
 
@@ -65,6 +73,11 @@ class FileManagerWidget(QWidget):
         # Conexiones del explorador de archivos
         self.file_explorer.files_ready_to_add.connect(self._add_files_to_selection)
         self.file_explorer.directory_changed.connect(self._on_directory_changed)
+        
+        # Conectar selección de archivo en el explorador para previsualización
+        self.file_explorer.tree_view.selectionModel().selectionChanged.connect(
+            self._on_explorer_selection_changed
+        )
 
         # Conexiones de archivos seleccionados
         self.selected_files.files_changed.connect(self._on_files_changed)
@@ -72,6 +85,24 @@ class FileManagerWidget(QWidget):
 
         # Conexiones de controles
         self.controls_widget.combine_requested.connect(self.combine_requested.emit)
+
+    def _on_explorer_selection_changed(self):
+        """Manejar cambio de selección en el explorador para actualizar vista previa"""
+        selection = self.file_explorer.tree_view.selectionModel().selectedIndexes()
+        
+        # Buscar el primer archivo PDF seleccionado
+        for index in selection:
+            if index.column() == 0:  # Solo considerar la primera columna
+                source_index = self.file_explorer.filter_model.mapToSource(index)
+                if not self.file_explorer.fs_model.isDir(source_index):
+                    file_path = self.file_explorer.fs_model.filePath(source_index)
+                    if file_path.lower().endswith('.pdf'):
+                        # Cargar el PDF en la vista previa
+                        self.pdf_preview.load_pdf(file_path)
+                        return
+        
+        # Si no hay PDF seleccionado, limpiar vista previa
+        self.pdf_preview.clear_preview()
 
     def _add_files_to_selection(self, file_paths: List[str]):
         """Agregar archivos a la selección"""
@@ -133,3 +164,4 @@ class FileManagerWidget(QWidget):
         self.file_explorer.reload_texts()
         self.selected_files.reload_texts()
         self.controls_widget.reload_texts()
+        self.pdf_preview.reload_texts()
