@@ -120,6 +120,20 @@ class SelectedFilesWidget(QWidget):
         self.move_up_button.setEnabled(has_selection)
         self.move_down_button.setEnabled(has_selection)
 
+    def reload_texts(self):
+        """Recarga los textos de la interfaz para el idioma actual."""
+        print("[DEBUG] SelectedFilesWidget.reload_texts called")
+        panel = self.findChild(QFrame)
+        if panel:
+            for child in panel.children():
+                if isinstance(child, QLabel):
+                    child.setText(_("Archivos Seleccionados"))
+                    break
+        self.move_up_button.setText(_("↑ Subir"))
+        self.move_down_button.setText(_("↓ Bajar"))
+        self.remove_button.setText(_("✕ Eliminar"))
+        self.clear_button.setText(_("🗑 Limpiar Todo"))
+
     def _move_selected_up(self):
         """Mover archivo seleccionado hacia arriba"""
         selected_rows = [index.row() for index in self.selected_list.selectionModel().selectedRows()]

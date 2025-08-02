@@ -1,6 +1,7 @@
 """
 Ventana principal de la aplicación
 """
+import os
 from typing import List, Dict
 from pathlib import Path
 from PyQt6.QtWidgets import (QMainWindow, QVBoxLayout, QHBoxLayout,
@@ -57,8 +58,44 @@ class PDFCombinerGUI(QMainWindow):
         # Crear el widget de gestión de archivos
         self.file_manager_widget = FileManagerWidget()
 
+        # Conectar cambio de idioma desde header
+        try:
+            header = self.file_manager_widget.header_widget
+            header.language_changed.connect(self._on_language_changed)
+        except AttributeError:
+            pass
+
         # Agregar al layout principal
         self.main_layout.addWidget(self.file_manager_widget)
+    def _on_language_changed(self, lang_code):
+        import utils.localization as localization
+        # Recargar traducción global
+        os.environ['LANG'] = f'{lang_code}_ES.UTF-8' if lang_code == 'es' else f'{lang_code}_US.UTF-8'
+        localization._ = localization.setup_gettext()
+
+        # Forzar importación de la nueva función _ en todos los módulos
+        import builtins
+        import gui.widgets.header_widget
+        import gui.widgets.file_explorer_widget
+        import gui.widgets.controls_widget
+        import gui.widgets.selected_files_widget
+
+        gui.widgets.header_widget._ = builtins._
+        gui.widgets.file_explorer_widget._ = builtins._
+        gui.widgets.controls_widget._ = builtins._
+        gui.widgets.selected_files_widget._ = builtins._
+
+        # Recargar ventana principal y widgets
+        self._reload_ui()
+
+    def _reload_ui(self):
+        # Recargar textos de la ventana principal
+        self.setWindowTitle(_("PDF Combiner Pro"))
+        # Recargar widgets
+        try:
+            self.file_manager_widget.reload_texts()
+        except AttributeError:
+            pass
 
     def _setup_connections(self):
         """Configurar conexiones de señales"""

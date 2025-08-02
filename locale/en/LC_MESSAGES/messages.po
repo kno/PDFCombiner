@@ -88,9 +88,8 @@ msgid "Crear índice interactivo"
 msgstr "Create interactive index"
 
 #: gui/widgets/controls_widget.py:46
-#, fuzzy
 msgid "🔗 Combinar PDFs"
-msgstr "PDF Combiner Pro"
+msgstr "🔗 Combine PDFs"
 
 #: gui/widgets/file_explorer_widget.py:42
 msgid "Explorador de Archivos"

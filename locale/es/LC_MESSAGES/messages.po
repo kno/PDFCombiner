@@ -85,56 +85,52 @@ msgstr "📄 {}"
 
 #: gui/widgets/controls_widget.py:35
 msgid "Crear índice interactivo"
-msgstr ""
+msgstr "Crear índice interactivo"
 
 #: gui/widgets/controls_widget.py:46
-#, fuzzy
 msgid "🔗 Combinar PDFs"
-msgstr "PDF Combiner Pro"
+msgstr "🔗 Combinar PDFs"
 
 #: gui/widgets/file_explorer_widget.py:42
 msgid "Explorador de Archivos"
-msgstr ""
+msgstr "Explorador de Archivos"
 
 #: gui/widgets/file_explorer_widget.py:48
 msgid "Filtrar por expresión regular..."
-msgstr ""
+msgstr "Filtrar por expresión regular..."
 
 #: gui/widgets/file_explorer_widget.py:54
 msgid "📁 ⬆️ Directorio superior"
-msgstr ""
+msgstr "📁 ⬆️ Directorio superior"
 
 #: gui/widgets/file_explorer_widget.py:66
 msgid "→ Agregar"
-msgstr ""
+msgstr "→ Agregar"
 
 #: gui/widgets/header_widget.py:25
 msgid "Gestor de Archivos PDF"
-msgstr ""
+msgstr "Gestor de Archivos PDF"
 
 #: gui/widgets/header_widget.py:57
-#, fuzzy, python-brace-format
 msgid "📁 {}"
 msgstr "📄 {}"
 
 #: gui/widgets/selected_files_widget.py:39
-#, fuzzy
 msgid "Archivos Seleccionados"
-msgstr "No hay ficheros seleccionados."
+msgstr "Archivos Seleccionados"
 
 #: gui/widgets/selected_files_widget.py:61
 msgid "↑ Subir"
-msgstr ""
+msgstr "↑ Subir"
 
 #: gui/widgets/selected_files_widget.py:62
 msgid "↓ Bajar"
-msgstr ""
+msgstr "↓ Bajar"
 
 #: gui/widgets/selected_files_widget.py:63
 msgid "✕ Eliminar"
-msgstr ""
+msgstr "✕ Eliminar"
 
 #: gui/widgets/selected_files_widget.py:64
 msgid "🗑 Limpiar Todo"
-msgstr ""
-
+msgstr "🗑 Limpiar Todo"

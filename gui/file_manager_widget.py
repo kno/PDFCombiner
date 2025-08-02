@@ -125,3 +125,11 @@ class FileManagerWidget(QWidget):
     def is_create_index_checked(self) -> bool:
         """Verificar si el checkbox de crear índice está marcado"""
         return self.controls_widget.is_create_index_checked()
+
+    def reload_texts(self):
+        """Recarga los textos de la interfaz para el idioma actual."""
+        print("[DEBUG] FileManagerWidget.reload_texts called")
+        self.header_widget.reload_texts()
+        self.file_explorer.reload_texts()
+        self.selected_files.reload_texts()
+        self.controls_widget.reload_texts()

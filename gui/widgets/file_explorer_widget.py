@@ -208,3 +208,16 @@ class FileExplorerWidget(QWidget):
     def set_selected_files_set(self, selected_files_set: Set[str]):
         """Establecer el set de archivos ya seleccionados para evitar duplicados"""
         self.selected_files_set = selected_files_set
+
+    def reload_texts(self):
+        """Recarga los textos de la interfaz para el idioma actual."""
+        print("[DEBUG] FileExplorerWidget.reload_texts called")
+        panel = self.findChild(QFrame)
+        if panel:
+            for child in panel.children():
+                if isinstance(child, QLabel):
+                    child.setText(_("Explorador de Archivos"))
+                    break
+        self.filter_line_edit.setPlaceholderText(_("Filtrar por expresión regular..."))
+        self.parent_dir_button.setText(_("📁 ⬆️ Directorio superior"))
+        self.add_button.setText(_("→ Agregar"))
