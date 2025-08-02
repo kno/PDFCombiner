@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import pyqtSignal
 from gui.styles import FileManagerStyles
+from utils.localization import _
 
 
 class ControlsWidget(QWidget):
@@ -31,7 +32,7 @@ class ControlsWidget(QWidget):
         controls_layout.addStretch()
 
         # Checkbox para crear índice interactivo
-        self.create_index_checkbox = QCheckBox("Crear índice interactivo")
+        self.create_index_checkbox = QCheckBox(_("Crear índice interactivo"))
         self.create_index_checkbox.setChecked(True)
         self.create_index_checkbox.setStyleSheet(FileManagerStyles.CREATE_INDEX_CHECKBOX)
         # Asegurar que el checkbox tenga suficiente espacio
@@ -42,7 +43,7 @@ class ControlsWidget(QWidget):
         controls_layout.addSpacing(20)
 
         # Botón combinar
-        self.combine_button = QPushButton("🔗 Combinar PDFs")
+        self.combine_button = QPushButton(_("🔗 Combinar PDFs"))
         self.combine_button.setMinimumHeight(40)
         self.combine_button.setEnabled(False)  # Inicialmente deshabilitado
         self.combine_button.setStyleSheet(FileManagerStyles.COMBINE_BUTTON)
@@ -71,3 +72,9 @@ class ControlsWidget(QWidget):
     def is_create_index_checked(self) -> bool:
         """Verificar si el checkbox de crear índice está marcado"""
         return self.create_index_checkbox.isChecked()
+
+    def reload_texts(self):
+        """Recarga los textos de la interfaz para el idioma actual."""
+        print("[DEBUG] ControlsWidget.reload_texts called")
+        self.create_index_checkbox.setText(_("Crear índice interactivo"))
+        self.combine_button.setText(_("🔗 Combinar PDFs"))

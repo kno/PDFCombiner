@@ -12,6 +12,7 @@ from PyQt6.QtGui import QFileSystemModel
 from gui.pdf_filter_model import PDFFilterModel
 from core.file_manager import FileManager
 from gui.styles import FileManagerStyles
+from utils.localization import _
 
 
 class FileExplorerWidget(QWidget):
@@ -38,19 +39,19 @@ class FileExplorerWidget(QWidget):
         layout = QVBoxLayout(panel)
 
         # Título del panel
-        title_label = QLabel("Explorador de Archivos")
+        title_label = QLabel(_("Explorador de Archivos"))
         title_label.setStyleSheet(FileManagerStyles.SECTION_TITLE)
         layout.addWidget(title_label)
 
         # Caja de texto para filtro rápido (regex)
         self.filter_line_edit = QLineEdit()
-        self.filter_line_edit.setPlaceholderText("Filtrar por expresión regular...")
+        self.filter_line_edit.setPlaceholderText(_("Filtrar por expresión regular..."))
         self.filter_line_edit.setClearButtonEnabled(True)
         self.filter_line_edit.setMinimumHeight(28)
         layout.addWidget(self.filter_line_edit)
 
         # Botón de subir directorio (aparece cuando es necesario)
-        self.parent_dir_button = QPushButton("📁 ⬆️ Directorio superior")
+        self.parent_dir_button = QPushButton(_("📁 ⬆️ Directorio superior"))
         self.parent_dir_button.setStyleSheet(FileManagerStyles.PARENT_DIR_BUTTON)
         self.parent_dir_button.setVisible(False)  # Inicialmente oculto
         layout.addWidget(self.parent_dir_button)
@@ -62,7 +63,7 @@ class FileExplorerWidget(QWidget):
 
         # Botón de agregar
         buttons_layout = QHBoxLayout()
-        self.add_button = QPushButton("→ Agregar")
+        self.add_button = QPushButton(_("→ Agregar"))
         self.add_button.setStyleSheet(FileManagerStyles.ADD_BUTTON)
         self.add_button.setEnabled(False)
         buttons_layout.addStretch()
@@ -207,3 +208,16 @@ class FileExplorerWidget(QWidget):
     def set_selected_files_set(self, selected_files_set: Set[str]):
         """Establecer el set de archivos ya seleccionados para evitar duplicados"""
         self.selected_files_set = selected_files_set
+
+    def reload_texts(self):
+        """Recarga los textos de la interfaz para el idioma actual."""
+        print("[DEBUG] FileExplorerWidget.reload_texts called")
+        panel = self.findChild(QFrame)
+        if panel:
+            for child in panel.children():
+                if isinstance(child, QLabel):
+                    child.setText(_("Explorador de Archivos"))
+                    break
+        self.filter_line_edit.setPlaceholderText(_("Filtrar por expresión regular..."))
+        self.parent_dir_button.setText(_("📁 ⬆️ Directorio superior"))
+        self.add_button.setText(_("→ Agregar"))

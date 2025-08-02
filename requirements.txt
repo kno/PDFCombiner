@@ -21,3 +21,6 @@ blessed==1.20.0
 
 # Build tools (for creating executables)
 pyinstaller==6.11.1
+
+# Internationalization
+Babel>=2.12.1

@@ -10,6 +10,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from gui.custom_list_view import CustomListView
 from gui.selected_files_model import SelectedFilesModel
 from gui.styles import FileManagerStyles
+from utils.localization import _
 
 
 class SelectedFilesWidget(QWidget):
@@ -35,7 +36,7 @@ class SelectedFilesWidget(QWidget):
         layout = QVBoxLayout(panel)
 
         # Título del panel
-        title_label = QLabel("Archivos Seleccionados")
+        title_label = QLabel(_("Archivos Seleccionados"))
         title_label.setStyleSheet(FileManagerStyles.SECTION_TITLE)
         layout.addWidget(title_label)
 
@@ -57,10 +58,10 @@ class SelectedFilesWidget(QWidget):
         # Botones de control
         buttons_layout = QHBoxLayout()
 
-        self.move_up_button = QPushButton("↑ Subir")
-        self.move_down_button = QPushButton("↓ Bajar")
-        self.remove_button = QPushButton("✕ Eliminar")
-        self.clear_button = QPushButton("🗑 Limpiar Todo")
+        self.move_up_button = QPushButton(_("↑ Subir"))
+        self.move_down_button = QPushButton(_("↓ Bajar"))
+        self.remove_button = QPushButton(_("✕ Eliminar"))
+        self.clear_button = QPushButton(_("🗑 Limpiar Todo"))
 
         # Estilos para botones
         for button in [self.move_up_button, self.move_down_button, self.remove_button, self.clear_button]:
@@ -118,6 +119,20 @@ class SelectedFilesWidget(QWidget):
         self.remove_button.setEnabled(has_selection)
         self.move_up_button.setEnabled(has_selection)
         self.move_down_button.setEnabled(has_selection)
+
+    def reload_texts(self):
+        """Recarga los textos de la interfaz para el idioma actual."""
+        print("[DEBUG] SelectedFilesWidget.reload_texts called")
+        panel = self.findChild(QFrame)
+        if panel:
+            for child in panel.children():
+                if isinstance(child, QLabel):
+                    child.setText(_("Archivos Seleccionados"))
+                    break
+        self.move_up_button.setText(_("↑ Subir"))
+        self.move_down_button.setText(_("↓ Bajar"))
+        self.remove_button.setText(_("✕ Eliminar"))
+        self.clear_button.setText(_("🗑 Limpiar Todo"))
 
     def _move_selected_up(self):
         """Mover archivo seleccionado hacia arriba"""

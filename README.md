@@ -1,246 +1,279 @@
 
-
 <img src="assets/anthropic_logo.svg" alt="Claude Sonnet" width="40" style="vertical-align:middle; margin-right:8px;"/> <img src="assets/chatgpt_logo.svg" alt="GPT" width="40" style="vertical-align:middle; margin-right:8px;"/>
 
-> **Disclaimer:** Esta aplicación ha sido construida con la ayuda de Vibe Coding, utilizando modelos de IA avanzados como Claude Sonnet (Anthropic) y GPT (OpenAI).
+> **Disclaimer:** This application has been built with the help of Vibe Coding, using advanced AI models like Claude Sonnet (Anthropic) and GPT (OpenAI).
 
 ---
 
 # PDF Combiner Pro
 
-**PDF Combiner Pro** es una herramienta profesional para combinar y fusionar archivos PDF con características avanzadas como generación automática de índices interactivos, extracción inteligente de títulos y una interfaz gráfica moderna.
+* [Versión en Español](README_es.md)
 
-## 🚀 Características Principales
+**PDF Combiner Pro** is a professional tool for combining and merging PDF files with advanced features like automatic interactive index generation, intelligent title extraction, and a modern graphical interface.
 
-- **Interfaz Gráfica Moderna**: Diseño con tema oscuro y controles intuitivos
-- **Combinación Inteligente**: Fusiona múltiples PDFs manteniendo la calidad original
-- **Índice Interactivo**: Genera automáticamente un índice con enlaces clickeables
-- **Explorador de Archivos Integrado**: Navega y selecciona archivos fácilmente
-- **Drag & Drop**: Arrastra y suelta archivos directamente en la aplicación
-- **Extracción de Títulos**: Reconoce automáticamente títulos desde nombres de archivos
-- **Corrección de Acentos**: Corrige automáticamente caracteres especiales
-- **Reordenamiento Visual**: Organiza los archivos mediante una interfaz visual
-- **Modo Línea de Comandos**: También funciona desde terminal para uso avanzado
+## 🚀 Key Features
 
-## 📋 Requisitos del Sistema
+- **Modern Graphical Interface**: Dark theme design with intuitive controls
+- **Multi-language Support**: Interface available in Spanish and English
+- **Intelligent Combining**: Merges multiple PDFs while maintaining original quality
+- **Interactive Index**: Automatically generates an index with clickable links
+- **Integrated File Explorer**: Navigate and select files easily
+- **Drag & Drop**: Drag and drop files directly into the application
+- **Title Extraction**: Automatically recognizes titles from file names
+- **Accent Correction**: Automatically corrects special characters
+- **Visual Reordering**: Organize files through a visual interface
+- **Command Line Mode**: Also works from terminal for advanced usage
 
-- **Python 3.8 o superior**
-- **macOS, Windows o Linux**
-- **512MB de RAM disponible** (para archivos PDF típicos)
-- **50MB de espacio libre en disco**
+## 📋 System Requirements
 
-## 🛠️ Instalación
+- **Python 3.8 or higher**
+- **macOS, Windows or Linux**
+- **512MB available RAM** (for typical PDF files)
+- **50MB free disk space**
 
-### 1. Clonar o Descargar el Proyecto
+## 🛠️ Installation
+
+### 1. Clone or Download the Project
 
 ```bash
-# Si tienes git instalado
+# If you have git installed
 git clone https://github.com/kno/PDFCombiner.git
 cd PDFCombiner
 
-# O simplemente descarga y descomprime el archivo ZIP desde:
+# Or simply download and extract the ZIP file from:
 # https://github.com/kno/PDFCombiner/archive/main.zip
 ```
 
-### 2. Crear el Entorno Virtual
+### 2. Create Virtual Environment
 
 ```bash
-# Navegar a la carpeta del proyecto
+# Navigate to project folder
 cd PDFCombiner
 
-# Crear entorno virtual
+# Create virtual environment
 python3 -m venv pdf_combiner
 
-# Activar entorno virtual
-# En macOS/Linux:
+# Activate virtual environment
+# On macOS/Linux:
 source pdf_combiner/bin/activate
 
-# En Windows:
+# On Windows:
 # pdf_combiner\Scripts\activate
 ```
 
-### 3. Instalar Dependencias
+### 3. Install Dependencies
 
 ```bash
-# Actualizar pip a la última versión
+# Update pip to latest version
 pip install --upgrade pip
 
-# Instalar todas las dependencias necesarias
+# Install all necessary dependencies
 pip install -r requirements.txt
 ```
 
-### 4. Verificar la Instalación
+### 4. Verify Installation
 
 ```bash
-# Probar que todo funciona correctamente
+# Test that everything works correctly
 python main.py
 ```
 
-## 🎯 Uso del Programa
+## 🎯 How to Use
 
-### Interfaz Gráfica (Recomendado)
+### 🌍 Language Selection
 
-1. **Ejecutar la aplicación**:
+The application supports multiple languages and automatically adapts to your system configuration:
+
+**Available languages:**
+- 🇪🇸 **Spanish** (default)
+- 🇺🇸 **English**
+
+**To manually change language:**
+
+```bash
+# Run in Spanish
+LANG=es_ES.UTF-8 python main.py
+
+# Run in English
+LANG=en_US.UTF-8 python main.py
+```
+
+**Included test script:**
+```bash
+# Test all languages automatically
+python test_languages.py
+```
+
+### Graphical Interface (Recommended)
+
+1. **Run the application**:
    ```bash
-   # Asegúrate de que el entorno virtual esté activado
+   # Make sure virtual environment is activated
    source pdf_combiner/bin/activate
    python main.py
    ```
 
-2. **Usar la aplicación**:
-   - **Explorador de archivos**: Navega por tus carpetas en el panel izquierdo
-   - **Drag & Drop**: Arrastra archivos PDF al panel derecho
-   - **Reordenar**: Usa los botones ↑ ↓ o arrastra elementos para reordenar
-   - **Combinar**: Haz clic en "Combinar PDFs" y elige dónde guardar el resultado
+2. **Use the application**:
+   - **File explorer**: Navigate through your folders in the left panel
+   - **Drag & Drop**: Drag PDF files to the right panel
+   - **Reorder**: Use ↑ ↓ buttons or drag elements to reorder
+   - **Combine**: Click "Combine PDFs" and choose where to save the result
 
-3. **Opciones avanzadas**:
-   - ✅ **Crear índice interactivo**: Genera enlaces clickeables en la primera página
-   - **Nombre de salida personalizado**: Especifica el nombre del archivo resultado
+3. **Advanced options**:
+   - ✅ **Create interactive index**: Generates clickable links on the first page
+   - **Custom output name**: Specify the name of the result file
 
-### Línea de Comandos (Avanzado)
+### Command Line (Advanced)
 
 ```bash
-# Ejecutar versión de línea de comandos
+# Run command line version
 python combinar_pdfs.py
 
-# O usar la versión con GUI básica
+# Or use basic GUI version
 python combinar_pdfs_gui.py
 ```
 
-## 📁 Estructura del Proyecto
+## 📁 Project Structure
 
 ```
 combinar_pdfs/
-├── main.py                 # Punto de entrada principal (GUI moderna)
-├── combinar_pdfs.py        # Versión línea de comandos
-├── combinar_pdfs_gui.py    # GUI básica alternativa
-├── requirements.txt        # Dependencias del proyecto
-├── README.md              # Este archivo
-├── config/                # Configuración de la aplicación
+├── main.py                 # Main entry point (modern GUI)
+├── combinar_pdfs.py        # Command line version
+├── combinar_pdfs_gui.py    # Alternative basic GUI
+├── requirements.txt        # Project dependencies
+├── README.md              # This file
+├── README_es.md           # Spanish README
+├── config/                # Application configuration
 │   ├── settings.py
 │   └── __init__.py
-├── core/                  # Lógica principal del programa
-│   ├── file_manager.py    # Gestión de archivos
-│   ├── pdf_combiner.py    # Servicio de combinación
+├── core/                  # Main program logic
+│   ├── file_manager.py    # File management
+│   ├── pdf_combiner.py    # Combination service
 │   └── __init__.py
-├── gui/                   # Interfaz gráfica
-│   ├── main_window.py     # Ventana principal
-│   ├── file_manager_widget.py  # Widget explorador
-│   ├── widgets.py         # Widgets personalizados
-│   ├── styles.py          # Estilos y temas
+├── gui/                   # Graphical interface
+│   ├── main_window.py     # Main window
+│   ├── file_manager_widget.py  # Explorer widget
+│   ├── widgets.py         # Custom widgets
+│   ├── styles.py          # Styles and themes
 │   └── __init__.py
-├── utils/                 # Utilidades
-│   ├── text_processor.py  # Procesamiento de texto
+├── utils/                 # Utilities
+│   ├── text_processor.py  # Text processing
+│   ├── localization.py    # Multi-language support
 │   └── __init__.py
-├── pdf_utils.py          # Utilidades PDF legacy
-└── pdfs/                 # Carpeta de ejemplo con PDFs
+├── locale/                # Translation files
+│   ├── en/LC_MESSAGES/    # English translations
+│   ├── es/LC_MESSAGES/    # Spanish translations
+│   └── messages.pot       # Translation template
+├── pdf_utils.py          # Legacy PDF utilities
+└── pdfs/                 # Example folder with PDFs
 ```
 
-## ⚙️ Configuración Avanzada
+## ⚙️ Advanced Configuration
 
-### Variables de Configuración
+### Configuration Variables
 
-Puedes modificar el archivo `config/settings.py` para personalizar:
+You can modify the `config/settings.py` file to customize:
 
-- **Tema visual** (claro/oscuro)
-- **Directorio por defecto**
-- **Patrones de nombres de archivos**
-- **Configuraciones de corrección de texto**
+- **Visual theme** (light/dark)
+- **Default directory**
+- **File name patterns**
+- **Text correction settings**
 
-### Formatos Soportados
+### Supported Formats
 
-- **Entrada**: Archivos PDF (.pdf)
-- **Salida**: PDF con índice interactivo y enlaces clickeables
+- **Input**: PDF files (.pdf)
+- **Output**: PDF with interactive index and clickable links
 
-## 🐛 Solución de Problemas
+## 🐛 Troubleshooting
 
 ### Error: "ModuleNotFoundError"
 
 ```bash
-# Asegúrate de que el entorno virtual esté activado
+# Make sure virtual environment is activated
 source pdf_combiner/bin/activate
 
-# Reinstala las dependencias
+# Reinstall dependencies
 pip install -r requirements.txt
 ```
 
-### Error: "PyQt6 no se instala correctamente"
+### Error: "PyQt6 doesn't install correctly"
 
 ```bash
-# En macOS con Homebrew
+# On macOS with Homebrew
 brew install qt6
 
-# Reinstalar PyQt6
+# Reinstall PyQt6
 pip uninstall PyQt6
 pip install PyQt6
 ```
 
-### Error: "Permission denied" en macOS
+### Error: "Permission denied" on macOS
 
 ```bash
-# Dar permisos de ejecución
+# Give execution permissions
 chmod +x main.py
 ```
 
-### Problema con Archivos Grandes
+### Large Files Issue
 
-- **Para archivos >50MB**: El procesamiento puede ser más lento
-- **Para múltiples archivos grandes**: Usa la versión de línea de comandos que es más eficiente
-- **Si el proceso es lento**: Asegúrate de cerrar otras aplicaciones que consuman mucha memoria
+- **For files >50MB**: Processing may be slower
+- **For multiple large files**: Use command line version which is more efficient
+- **If process is slow**: Make sure to close other memory-consuming applications
 
-## 🔧 Desarrollo
+## 🔧 Development
 
-### Ejecutar en Modo Desarrollo
+### Run in Development Mode
 
 ```bash
-# Activar entorno virtual
+# Activate virtual environment
 source pdf_combiner/bin/activate
 
-# Ejecutar con logs detallados
+# Run with detailed logs
 python main.py --debug
 ```
 
-### Estructura de Dependencias
+### Dependencies Structure
 
-Las dependencias principales son:
+Main dependencies are:
 
-- **PyQt6**: Interfaz gráfica moderna
-- **PyPDF2**: Manipulación básica de PDFs
-- **PyMuPDF (fitz)**: Procesamiento avanzado de PDFs
-- **ReportLab**: Generación de PDFs con índices
-- **Pillow**: Procesamiento de imágenes
-- **Inquirer**: Interfaz de línea de comandos interactiva
+- **PyQt6**: Modern graphical interface
+- **PyPDF2**: Basic PDF manipulation
+- **PyMuPDF (fitz)**: Advanced PDF processing
+- **ReportLab**: PDF generation with indexes
+- **Pillow**: Image processing
+- **Inquirer**: Interactive command line interface
+- **Babel**: Internationalization support
 
-## 📝 Ejemplos de Uso
+## 📝 Usage Examples
 
-### Caso 1: Combinar PDFs de un Curso
+### Case 1: Combine Course PDFs
 
-1. Abre la aplicación: `python main.py`
-2. Navega a la carpeta con los PDFs del curso
-3. Selecciona los archivos en orden (Día 1, Día 2, etc.)
-4. Activa "Crear índice interactivo"
-5. Combina y obtén un PDF con navegación
+1. Open the application: `python main.py`
+2. Navigate to the folder with course PDFs
+3. Select files in order (Day 1, Day 2, etc.)
+4. Enable "Create interactive index"
+5. Combine and get a PDF with navigation
 
-### Caso 2: Compilar Documentos de Trabajo
+### Case 2: Compile Work Documents
 
-1. Arrastra múltiples documentos PDF al área de trabajo
-2. Reordena según importancia usando los controles
-3. Especifica un nombre descriptivo para el archivo final
-4. Combina y obtén un documento único organizado
+1. Drag multiple PDF documents to the work area
+2. Reorder by importance using the controls
+3. Specify a descriptive name for the final file
+4. Combine and get a single organized document
 
-## 🆘 Soporte
+## 🆘 Support
 
-Si encuentras problemas:
+If you encounter problems:
 
-1. **Revisa los logs**: La aplicación muestra errores detallados
-2. **Verifica dependencias**: `pip list` para ver paquetes instalados
-3. **Prueba versión línea de comandos**: Más estable para archivos grandes
-4. **Reinicia entorno virtual**: Desactiva y activa de nuevo
+1. **Check logs**: The application shows detailed errors
+2. **Verify dependencies**: `pip list` to see installed packages
+3. **Try command line version**: More stable for large files
+4. **Restart virtual environment**: Deactivate and activate again
 
-## 📄 Licencia
+## 📄 License
 
-Este proyecto es de uso libre para fines educativos y personales.
+This project is free to use for educational and personal purposes.
 
 ---
 
-**PDF Combiner Pro** - Herramienta profesional para combinar PDFs con estilo 🎨
+**PDF Combiner Pro** - Professional tool for combining PDFs with style 🎨
